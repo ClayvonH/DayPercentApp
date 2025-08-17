@@ -1,0 +1,113 @@
+//
+//  CreateGoalView.swift
+//  IphoneAppOfficial
+//
+//  Created by Clayvon Hatton on 8/12/25.
+//
+
+
+import SwiftUI
+import CoreData
+
+struct CreateGoalView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    @ObservedObject var goalVM: GoalViewModel
+    @State private var goalTitle: String = ""
+    @State private var selectedDate: Date = Date()
+    @State private var showEmptyTitleAlert = false
+    
+    
+    var body: some View {
+        NavigationStack {
+            VStack (alignment: .leading){
+                
+                Text("GOAL TITLE")
+                    .font(.title)
+                    .bold()
+                
+                
+                TextField("Enter Goal Title", text: $goalTitle)
+                    .padding(.leading)
+                    .frame(width: 350,height: 40)
+                    .background(Color(.systemGray6))
+                
+                Text("Due Date")
+                    .font(.title)
+                    .bold()
+                
+                DatePicker("Select Date", selection: $selectedDate)
+                    .padding(.horizontal)
+                    
+                
+                Button(action: {
+                    guard !goalTitle.isEmpty else {
+                          showEmptyTitleAlert = true
+                          return
+                      }
+                    goalVM.addGoal(text: goalTitle, date: selectedDate)
+                    goalVM.fetchGoals()
+                    dismiss()
+                }, label: {
+                    
+                    Text("CREATE GOAL")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .contentShape(Rectangle())
+                })
+                
+                .frame(width: 350,height: 40)
+                .foregroundStyle(.white)
+                .background(Color(.blue))
+                .cornerRadius(15)
+                .padding(.top, 40)
+                .padding(.leading, 9)
+                
+                HStack {
+                    Spacer()
+                    Button(action: {
+                        dismiss()
+                        
+                    }, label: {
+                        
+                        Text("CANCEL")
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .contentShape(Rectangle())
+                    })
+                    
+                    .frame(width: 150,height: 40)
+                    
+                    .foregroundStyle(.black)
+                    
+                    .background(Color.gray.opacity(0.2))
+                    .cornerRadius(15)
+                    
+                    .padding(.top)
+                    Spacer()
+                }
+                
+                   
+                
+            }
+            .frame(maxWidth: .infinity, maxHeight: 600, alignment: .topLeading)
+            
+            .padding(.leading)
+            
+            .navigationTitle("Create Goal")
+        }
+        .alert("Must enter a goal title", isPresented: $showEmptyTitleAlert) {
+            Button("OK", role: .cancel) {
+                
+            }
+        }
+        
+        
+    }
+        
+
+        
+
+}
+
+#Preview {
+    CreateGoalView(goalVM: GoalViewModel())
+}
