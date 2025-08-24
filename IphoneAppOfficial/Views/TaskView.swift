@@ -59,7 +59,7 @@ struct TaskView: View {
     
     
     var body: some View {
-        NavigationStack {
+        VStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 35) {
                     VStack {
@@ -78,8 +78,6 @@ struct TaskView: View {
                                     .font(.largeTitle)
                                     .fontDesign(.serif)
                                     .bold()
-                                
-                                
                                 
                                 
                                 if isEditView {
@@ -251,7 +249,8 @@ struct TaskView: View {
                             }
                             
                         }
-                        if editElapsedTime && isEditView == true {VStack {
+                        if editElapsedTime && isEditView == true {
+                            VStack {
                             Text("Change Elapsed Time")
                                 .font(.title3)
                                 .bold()
@@ -418,10 +417,17 @@ struct TaskView: View {
                             Text("\(Int(timer.percentCompletion))%")
                                 .font(.title2)
                         }
-                        ProgressView(value: timer.elapsedTime, total: timer.countdownNum)
-                            .frame(width: 380, height: 12)
-                            .tint(timer.isRunning == true ? Color.red : Color.accentColor)
-                            .clipShape(Capsule())
+                        HStack {
+                            Spacer()
+                            ProgressView(value: timer.elapsedTime, total: timer.countdownNum)
+                                .frame(maxWidth: .infinity, maxHeight: 12)
+                                .tint(timer.isRunning == true ? Color.red : Color.accentColor)
+                                .clipShape(Capsule())
+                                .padding(.trailing, 10)
+                            Spacer()
+                        }
+//                        .background(Color.yellow)
+                        .frame(maxWidth: .infinity)
                         
                         HStack {
                             Button(action: {
@@ -567,9 +573,10 @@ struct TaskView: View {
                         }
                         
                         ProgressView(value: quantity.currentQuantity, total: quantity.totalQuantity)
-                            .frame(width: 380, height: 12)
+                            .frame(maxWidth: .infinity, maxHeight: 12)
                             .tint(Color.accentColor)
                             .clipShape(Capsule())
+                            .padding(.trailing, 10)
                     
                 
                         HStack {
@@ -590,14 +597,15 @@ struct TaskView: View {
                         .frame(maxWidth: .infinity, alignment: .center)
                     }
                 }
+//                .padding(.horizontal, 10)
                 .padding(.leading, 12)
                 .padding(.top, 15)
-                .frame(maxWidth: 410, minHeight: 750, alignment: .topLeading)
+                .frame(maxWidth: .infinity, minHeight: 750, alignment: .topLeading)
                 .background(colorScheme == .dark ? Color(.gray.opacity(0.20)) : Color.white)
                 .cornerRadius(12)
             }
+            .padding(.horizontal, 10)
             .padding(.top, 20)
-            .frame(minWidth: 500)
             .background(colorScheme == .dark ? Color(.black) : Color(.systemGray5))
             
             HStack {
@@ -626,6 +634,7 @@ struct TaskView: View {
             }
         
         }
+        .frame(maxWidth: .infinity)
         .background(colorScheme == .dark ? Color(.black) : Color(.systemGray5))
         .sheet(isPresented: $showSheet) {
             IncrementView(task: task, taskVM: taskVM)

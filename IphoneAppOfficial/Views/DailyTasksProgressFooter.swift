@@ -12,6 +12,7 @@ struct DailyTaskProgressFooter: View {
     
     
     var goal: Goal?
+    var date: Date?
     @ObservedObject var taskVM: TaskViewModel
     @ObservedObject var timerVM: TimerViewModel
     @ObservedObject var goalVM: GoalViewModel
@@ -40,11 +41,11 @@ struct DailyTaskProgressFooter: View {
                         if goal.estimatedTimeRemaining > 0 {
                             
                             
-                            Text("Time Remaining: \(goal.estimatedTimeRemaining.asHoursMinutesSecondsWithLabels())")
+                            Text("Time Remaining: \(goal.estimatedTimeRemaining.asHoursMinutesSeconds())")
                                 .bold()
                                 .foregroundColor(colorScheme == .dark ? .white : .black)
                         }
-                    } else {
+                    } else if (date == nil) {
                         if timerVM.taskTimeRemaining > 0 {
                             
                             
@@ -53,8 +54,14 @@ struct DailyTaskProgressFooter: View {
                                 .foregroundColor(colorScheme == .dark ? .white : .black)
                         }
                         Spacer()
-                    }
+                    } else if (date != nil ){
+                         
+                            Text("Time Remaining: \(timerVM.dayTaskTimeRemaining.asHoursMinutesSeconds())")
+                                    .bold()
+                                    .foregroundColor(colorScheme == .dark ? .white : .black)
+                            
                         
+                    }
                     //                    if let tasks = goal.task as? Set<Task>, !tasks.isEmpty {
                     //                        ProgressView(value: goal.combinedElapsed, total: goal.overAllTimeCombined)
                     //                            .frame(width: 50, height: 10)
@@ -76,7 +83,7 @@ struct DailyTaskProgressFooter: View {
                                 .foregroundColor(colorScheme == .dark ? .white : .black)
                             Spacer()
                         }
-                    } else {
+                    } else if (date == nil){
                         if timerVM.totalTaskTime > 0 {
                             
                             
@@ -87,6 +94,17 @@ struct DailyTaskProgressFooter: View {
                                 .foregroundColor(colorScheme == .dark ? .white : .black)
                             Spacer()
                         }
+                    } else {
+                        if timerVM.dayCombinedElapsedProgress > 0 {
+                            ProgressView(value: timerVM.dayCombinedElapsedProgress, total: timerVM.dayTotalTaskTime)
+                                .frame(width: 120, height: 20)
+                        }
+                        
+                        Text("\(Int(timerVM.dayTaskProgressPercent))%")
+                            .bold()
+                            .foregroundColor(colorScheme == .dark ? .white : .black)
+                        Spacer()
+                        
                     }
                 }
             }
@@ -94,7 +112,11 @@ struct DailyTaskProgressFooter: View {
             .background(colorScheme == .light ? Color.white : Color(.secondarySystemBackground))
             .onAppear {
 //                path.removeAll()
-                taskVM.fetchTasks()
+//                taskVM.fetchTasks()
+                if let date = date {
+                    timerVM.beginProgressUpdatesDate(date: date, tasks: displayedTasks)
+//                    timerVM.ElapsedTimeForTasks(allTasks: displayedTasks)
+                }
              
 //                vm.startSharedUITimer()
 //                vm.beginProgressUpdates(for: Date())
@@ -110,6 +132,16 @@ struct DailyTaskProgressFooter: View {
                 
                 
                 }
+            .onChange(of: displayedTasks) {
+                if let date = date {
+                    timerVM.beginProgressUpdatesDate(date: date, tasks: displayedTasks)
+                    //                    timerVM.
+                    
+                }
+                
+                }
+        
+            
         }
 
 //    }

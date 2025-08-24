@@ -61,15 +61,16 @@ struct TaskRectangularNavLink: View {
                     
                    
                 }
-                .frame(minWidth: 395, minHeight: 140, maxHeight: 150, alignment: .topLeading)
+                .frame(maxWidth: .infinity, minHeight: 140, maxHeight: 150, alignment: .topLeading)
                 .background(Color.white)
                 
                 
                 
             }
         }
-        .frame(minWidth: 400, maxWidth: 405, minHeight: 170, maxHeight:180)
         .buttonStyle(PlainButtonStyle())
+        .frame(maxWidth: .infinity, minHeight: 170, maxHeight:180)
+        .padding(.horizontal, 10)
     
     }
 }
@@ -119,11 +120,13 @@ struct TaskRectangularNavLinkSmall: View {
                 .frame(maxWidth: .infinity, maxHeight: 80, alignment: .topLeading)
 //                .background(Color.red)
             }
-            .frame(width: 410, height: 80)
+            .frame(maxWidth: .infinity, maxHeight: 80)
 //            .background(Color.green)
           
         }
         .buttonStyle(PlainButtonStyle())
+        .frame(maxWidth: .infinity, maxHeight: 80)
+        .padding(.horizontal, 10)
     }
 }
 
@@ -169,15 +172,17 @@ struct TaskRectangularNavLinkSimple: View {
                     
                    
                 }
-                .frame(minWidth: 395, minHeight: 80, maxHeight: 100, alignment: .topLeading)
+                .frame(maxWidth: .infinity, minHeight: 80, maxHeight: 100, alignment: .topLeading)
                 .background(Color.white)
                 
                 
                 
             }
         }
-        .frame(minWidth: 400, maxWidth: 405, minHeight: 130, maxHeight:140)
         .buttonStyle(PlainButtonStyle())
+        .frame(maxWidth: .infinity, minHeight: 130, maxHeight:140)
+        .padding(.horizontal, 10)
+        
     
     }
 }
@@ -226,9 +231,11 @@ struct TaskRectangularNavLinkSimpleSmall: View {
                 
                 
             }
+            .frame(maxWidth: .infinity, maxHeight: 80)
         }
-        .frame(width: 410, height: 80)
         .buttonStyle(PlainButtonStyle())
+        .frame(maxWidth: .infinity, minHeight: 80, maxHeight: 80)
+        .padding(.horizontal, 10)
     
     }
 }

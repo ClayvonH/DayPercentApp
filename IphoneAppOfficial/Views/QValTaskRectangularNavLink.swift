@@ -75,14 +75,15 @@ struct QValTaskRectangularNavLink: View {
                     
                    
                 }
-                .frame(minWidth: 395, minHeight: 140, maxHeight: 150, alignment: .topLeading)
+                .frame(maxWidth: .infinity, minHeight: 140, maxHeight: 150, alignment: .topLeading)
                 .background(Color.white)
                 
                 
                 
             }
         }
-        .frame(minWidth: 400, maxWidth: 405, minHeight: 170, maxHeight:180)
+        .frame(maxWidth: .infinity, minHeight: 170, maxHeight:180)
+        .padding(.horizontal, 10)
         .buttonStyle(PlainButtonStyle())
     
     }
@@ -138,11 +139,13 @@ struct QValTaskRectangularNavLinkSmall: View {
                 .frame(maxWidth: .infinity, maxHeight: 80, alignment: .topLeading)
 //                .background(Color.red)
             }
-            .frame(width: 410, height: 80)
+            .frame(maxWidth: .infinity, maxHeight: 80)
+           
 //            .background(Color.green)
           
         }
         .buttonStyle(PlainButtonStyle())
+        .padding(.horizontal, 10)
     }
 }
 

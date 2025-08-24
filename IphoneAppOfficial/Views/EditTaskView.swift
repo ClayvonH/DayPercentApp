@@ -75,6 +75,7 @@ struct EditTaskView: View {
 
             // Your actual Task card UI (or another subview)
         }
+        
     }
 }
 

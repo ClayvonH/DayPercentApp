@@ -46,6 +46,11 @@ class TimerViewModel: ObservableObject {
     @Published var taskTimeRemaining: Double = 0
     @Published var activeTasksNum : Int = 0
     @Published var completedTasksNum : Int = 0
+    @Published var dayCombinedElapsedProgress: Double = 0
+    @Published var dayTimeRemaining: Double = 0
+    @Published var dayTotalTaskTime: Double = 0
+    @Published var dayTaskProgressPercent: Double = 0
+    @Published var dayTaskTimeRemaining: Double = 0
     
     @Published var timerElapsed: Double = 0
 
@@ -197,6 +202,35 @@ class TimerViewModel: ObservableObject {
           progressUpdateTimer = nil
       }
     
+    func beginProgressUpdatesDate(date: Date, tasks: [Task]) {
+        progressUpdateTimer?.cancel()
+
+        progressUpdateTimer = Timer.publish(every: 0.5, on: .main, in: .common)
+            .autoconnect()
+            .sink { [weak self] _ in
+                guard let self = self else { return }
+
+                DispatchQueue.global(qos: .userInitiated).async {
+                    let result = self.ElapsedTimeForTasks(allTasks: tasks)
+
+                    DispatchQueue.main.async {
+                        self.dayCombinedElapsedProgress = result.combinedElapsed
+                        self.dayTotalTaskTime = result.overAllTime
+                        self.dayTaskProgressPercent = result.percentComplete
+                        self.dayTaskTimeRemaining = result.estimatedTimeRemaining
+                        self.updateAllRunningTaskTimers()
+                    }
+                    
+//                    @Published var dayTimeRemaining: Double = 0
+//                    @Published var dayTotalTaskTime: Double = 0
+//                    @Published var dayTaskProgressPercent: Double = 0
+//                    @Published var dayTaskTimeRemaining: Double = 0
+                }
+            }
+        
+        print("daily progress Update")
+    }
+    
     
     
     func updateCombinedTimers() {
@@ -220,6 +254,30 @@ class TimerViewModel: ObservableObject {
         
         
     }
+    
+    func estimatedTimeRemaining(for date: Date) -> Double {
+        let calendar = Calendar.current
+        
+        let startOfDay = calendar.startOfDay(for: date)
+        let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
+        
+        let request: NSFetchRequest<Task> = Task.fetchRequest()
+        request.predicate = NSPredicate(format: "dueDate >= %@ AND dueDate < %@", startOfDay as NSDate, endOfDay as NSDate)
+        
+        do {
+            let tasksForDate = try CoreDataManager.shared.context.fetch(request)
+            let result = ElapsedTimeForTasks(allTasks: tasksForDate)
+            dayTaskTimeRemaining = result.estimatedTimeRemaining
+            return dayTimeRemaining
+        } catch {
+            print("Fetch error: \(error)")
+            return 0
+        }
+    }
+
+
+
+
     
     func resumeTimer (task: Task) {
         guard let timerData = task.timer else { return }

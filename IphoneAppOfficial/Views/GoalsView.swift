@@ -81,8 +81,12 @@ struct GoalsView: View {
                                             VStack (alignment: .center) {
                                                 
                                                 Text(goal.title ?? "No title")
-                                                    .font(.title2).bold()
+                                                    .font(.title).bold()
                                                     .foregroundColor(.primary)
+                                                
+                                                Text("Due: \(goal.dateDue ?? Date(), style: .date)")
+                                                    .font(.headline)
+                                                    .bold()
                                                 
                                                    
                                                 
@@ -90,7 +94,7 @@ struct GoalsView: View {
                                                     let completed = tasks.filter { $0.isComplete }.count
                                                     let total = tasks.count
                                                     
-                                                    let percent: Double = total > 0 ? (Double(completed) / Double(total)) * 100 : 0.0
+                                                    let _: Double = total > 0 ? (Double(completed) / Double(total)) * 100 : 0.0
 //                                                    let percentString = String(format: "%.2f", percent)
                                                     HStack {
                                                         Text("Tasks Completed:")
@@ -109,7 +113,7 @@ struct GoalsView: View {
                                                 
                                                 
                                                 HStack {
-                                                    Text("Time Remaining")
+                                                    Text("Time Remaining:")
                                                         .bold()
                                                         .font(.headline)
                                                     Text(" \(goal.estimatedTimeRemaining.asHoursMinutesSecondsWithLabels())")
@@ -129,13 +133,13 @@ struct GoalsView: View {
                                                    
                                                 }
     //                                            .background(Color.blue)
-                                                .frame(width: 350)
+                                                .frame(maxWidth: 350)
                                                 
                                                 
 
 
                                             }
-                                            .frame(width: 380, alignment: .center)
+                                            .frame(maxWidth: 380, alignment: .center)
                                             .padding(.leading)
 //                                            .background(Color.green)
                                             
@@ -160,7 +164,7 @@ struct GoalsView: View {
                                     
                                     
                                 }
-                                .frame( height: 130)
+                                .frame(maxWidth: .infinity, minHeight: 150)
                               
                                 
                             }
@@ -173,6 +177,7 @@ struct GoalsView: View {
                     
                     .buttonStyle(PlainButtonStyle())
                 }
+                .padding(.horizontal, 5)
                 
                 HStack {
                     

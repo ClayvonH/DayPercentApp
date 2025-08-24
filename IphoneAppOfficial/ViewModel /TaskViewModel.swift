@@ -15,6 +15,10 @@ class TaskViewModel: ObservableObject {
     
     @Published var savedTasks: [Task] = []
     @Published var dailyTasks: [Task] = []
+    @Published var dateTasks: [Task] = []
+    
+    
+    
     
     
     
@@ -38,6 +42,29 @@ class TaskViewModel: ObservableObject {
         
         
     }
+    
+    func fetchTasksForDate(for date: Date) {
+        let request = NSFetchRequest<Task>(entityName: "Task")
+        
+        // Calculate the start and end of the day
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: date)
+        guard let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)?.addingTimeInterval(-1) else { return }
+        
+        // Predicate to fetch tasks within that day
+        request.predicate = NSPredicate(format: "dateDue >= %@ AND dateDue <= %@", startOfDay as NSDate, endOfDay as NSDate)
+        
+        do {
+            let tasksForDate = try container.viewContext.fetch(request)
+            dailyTasks = tasksForDate
+            print("Fetched \(tasksForDate.count) tasks for \(date)")
+        } catch {
+            print("Error fetching tasks: \(error)")
+        }
+        
+        dateTasks = getTasks(for: date)
+    }
+
     
     
     
@@ -404,8 +431,14 @@ class TaskViewModel: ObservableObject {
             
         case .dueDate:
             return tasks.sorted { ($0.dateDue ?? .distantFuture) < ($1.dateDue ?? .distantFuture) }
+            
         case .progress:
-            return tasks.sorted { ($0.timer?.percentCompletion ?? 0) > ($1.timer?.percentCompletion ?? 0) }
+            return tasks.sorted {
+                let progress1 = $0.timer?.percentCompletion ?? $0.quantityval?.percentCompletion ?? 0
+                let progress2 = $1.timer?.percentCompletion ?? $1.quantityval?.percentCompletion ?? 0
+                return progress1 > progress2
+            }
+            
         case .newest:
             return tasks.sorted { ($0.dateCreated ?? Date()) > ($1.dateCreated ?? Date())}
             
@@ -440,6 +473,37 @@ class TaskViewModel: ObservableObject {
             
         case .oldest:
             return tasks.sorted { ($0.dateCreated ?? Date()) < ($1.dateCreated ?? Date())}
+        case .recent:
+            return tasks.sorted { ($0.lastActive ?? Date()) > ($1.lastActive ?? Date())}
+        }
+    }
+    
+    func sortedTasksDate(date: Date, option: TaskSortOption) -> [Task] {
+        let tasks = getTasks(for: date)
+        
+        switch option {
+        case .title:
+            return tasks.sorted { ($0.title ?? "") < ($1.title ?? "") }
+            
+        case .zaTitle:
+            return tasks.sorted { ($0.title ?? "") > ($1.title ?? "") }
+            
+        case .dueDate:
+            return tasks.sorted { ($0.dateDue ?? .distantFuture) < ($1.dateDue ?? .distantFuture) }
+            
+        case .progress:
+            return tasks.sorted {
+                let progress1 = $0.timer?.percentCompletion ?? $0.quantityval?.percentCompletion ?? 0
+                let progress2 = $1.timer?.percentCompletion ?? $1.quantityval?.percentCompletion ?? 0
+                return progress1 > progress2
+            }
+            
+        case .newest:
+            return tasks.sorted { ($0.dateCreated ?? Date()) > ($1.dateCreated ?? Date())}
+            
+        case .oldest:
+            return tasks.sorted { ($0.dateCreated ?? Date()) < ($1.dateCreated ?? Date())}
+            
         case .recent:
             return tasks.sorted { ($0.lastActive ?? Date()) > ($1.lastActive ?? Date())}
         }

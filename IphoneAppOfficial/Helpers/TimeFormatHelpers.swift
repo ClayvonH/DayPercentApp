@@ -65,3 +65,10 @@ extension Double {
         return components.joined(separator: " ")
     }
 }
+
+
+extension Date {
+    func startOfDay() -> Date {
+        Calendar.current.startOfDay(for: self)
+    }
+}

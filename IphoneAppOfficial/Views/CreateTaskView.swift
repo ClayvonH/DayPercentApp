@@ -21,6 +21,7 @@ struct CreateTaskView: View {
     @State var newTask: Task?
 //    @ObservedObject var task: Task
     @State var goal: Goal?
+    @State var date: Date?
     @ObservedObject var taskVM: TaskViewModel
     @ObservedObject var goalVM: GoalViewModel
     @ObservedObject var timerVM: TimerViewModel
@@ -31,6 +32,8 @@ struct CreateTaskView: View {
         components.minute = 0
         return Calendar.current.date(from: components) ?? Date()
     }()
+    
+    
 
     @State private var timeBased: Bool = true
     @State var seconds:  Double = 0
@@ -64,6 +67,11 @@ struct CreateTaskView: View {
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
     
+    func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MM/dd/yy"
+        return formatter.string(from: date)
+    }
     
     var body: some View {
         if showTimerSelectView == false {
@@ -89,6 +97,14 @@ struct CreateTaskView: View {
                         
                     }
                     
+                    if let date = date {
+                        Text("Tasks For \(formatDate(date))")
+                            .font(.title)
+                            .bold()
+                            .padding(.bottom)
+                        
+                    }
+                    
                     Text("Task Title")
                         .font(.title)
                         .bold()
@@ -96,7 +112,7 @@ struct CreateTaskView: View {
                     HStack {
                         TextField("Enter task Title", text: $taskTitle)
                             .padding(.leading)
-                            .frame(width: titleIsFocused ? 350 : 395, height: 44)
+                            .frame(maxWidth: titleIsFocused ? 320 : 395, minHeight: 44)
                             .background(Color(.systemGray6))
                             .focused($titleIsFocused)
                         
@@ -109,6 +125,9 @@ struct CreateTaskView: View {
                             .animation(.easeInOut, value: titleIsFocused)
                         }
                     }
+                    .frame(maxWidth: .infinity)
+                    
+                    
                     
                     
                     
@@ -149,11 +168,10 @@ struct CreateTaskView: View {
                                         
                                         if selectedWeekdays.contains(day) {
                                             Text(day.name)
-                                                .font(.title3)
                                                 .foregroundColor(.red)
                                         } else {
                                             Text(day.name)
-                                                .font(.title3)
+                                                
                                         }
                                         
                                         
@@ -178,6 +196,7 @@ struct CreateTaskView: View {
                     Text("Scheduled Date")
                         .font(.title)
                         .bold()
+                        .padding(.trailing, 10)
                     
                     DatePicker("Select Date", selection: $selectedDate)
                         .padding(.horizontal)
@@ -273,7 +292,7 @@ struct CreateTaskView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 
-                .padding(.leading)
+                .padding(.horizontal, 20)
                 
                 //            .navigationDestination(isPresented: $showTimerSelectView) {
                 //

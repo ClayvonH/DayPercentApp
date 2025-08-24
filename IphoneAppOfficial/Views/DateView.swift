@@ -1,17 +1,19 @@
 //
-//  DailyTasksView.swift
+//  DateView.swift
 //  IphoneAppOfficial
 //
-//  Created by Clayvon Hatton on 7/31/25.
+//  Created by Clayvon Hatton on 8/19/25.
 //
+
 
 import SwiftUI
 import CoreData
 
-struct DailyTasksView: View {
-    @StateObject private var taskVM: TaskViewModel
-    @StateObject private var goalVM: GoalViewModel
-    @StateObject private var timerVM: TimerViewModel
+struct DateView: View {
+    @State var date: Date
+    @ObservedObject var taskVM: TaskViewModel
+    @ObservedObject var goalVM: GoalViewModel
+    @ObservedObject var timerVM: TimerViewModel
     @State private var isCompactView = true
     
     @State private var selectedTaskForSheet: Task? = nil
@@ -21,47 +23,55 @@ struct DailyTasksView: View {
     @State private var showDeleteConfirmation = false
     @State private var showDeleteAllTasksConfirmation = false
     @State private var taskToDelete: Task? = nil
+    
+    
 
     
 //    var dummyTask: Task
     
     @State private var showCreateTask = false
     
-    init() {
-         let taskVM = TaskViewModel()
-         let goalVM = GoalViewModel()
-         let timerVM = TimerViewModel(taskViewModel: taskVM, goalViewModel: goalVM)
-
-         self._taskVM = StateObject(wrappedValue: taskVM)
-         self._goalVM = StateObject(wrappedValue: goalVM)
-         self._timerVM = StateObject(wrappedValue: timerVM)
-
-     }
+//    init() {
+//         let taskVM = TaskViewModel()
+//         let goalVM = GoalViewModel()
+//         let timerVM = TimerViewModel(taskViewModel: taskVM, goalViewModel: goalVM)
+//
+//         self._taskVM = StateObject(wrappedValue: taskVM)
+//         self._goalVM = StateObject(wrappedValue: goalVM)
+//         self._timerVM = StateObject(wrappedValue: timerVM)
+//
+//     }
     
     @State private var selectedSort: TaskSortOption = .title
     
     var displayedTasks: [Task] {
-        taskVM.sortedTasksAll(allTasks: taskVM.savedTasks, option: selectedSort)
+//        taskVM.sortedTasksAll(allTasks: taskVM.savedTasks, option: selectedSort)
+        taskVM.sortedTasksDate(date: date, option: selectedSort)
     }
     
     
     var sortedTasks: [Task] {
-        taskVM.sortedTasksAll(allTasks: taskVM.savedTasks, option: selectedSort)
+        taskVM.sortedTasksDate(date: date, option: selectedSort)
     }
     
     var completedCount: Int {
-        taskVM.savedTasks.filter { $0.isComplete }.count
+        displayedTasks.filter { $0.isComplete }.count
     }
 
     var totalCount: Int {
-        taskVM.savedTasks.count
+        displayedTasks.count
+    }
+    
+    func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MM/dd/yy"
+        return formatter.string(from: date)
     }
     
     var body: some View {
         
        
         
-        NavigationStack {
             VStack {
                 Button(action: {taskVM.deleteAllTasks()}, label: {
                     Text("delete all tasks")
@@ -72,7 +82,7 @@ struct DailyTasksView: View {
                     ScrollView (){
                         
                         HStack {
-                            Text("Daily Tasks")
+                            Text("Tasks For \(formatDate(date))")
                                 .font(.largeTitle)
                                 .bold()
                                 .padding(.leading)
@@ -127,7 +137,7 @@ struct DailyTasksView: View {
                                 }
                             }
                             
-                                                    if taskVM.savedTasks.contains(where: { $0.isComplete }) {
+                                                    if displayedTasks.contains(where: { $0.isComplete }) {
                             Text("Completed Tasks")
                                 .font(.title)
                                 .bold()
@@ -151,7 +161,7 @@ struct DailyTasksView: View {
                 
                 VStack (spacing: 0) {
                     
-                    DailyTaskProgressFooter(taskVM: taskVM, timerVM: timerVM, goalVM: goalVM, displayedTasks: displayedTasks)
+                    DailyTaskProgressFooter(date: date, taskVM: taskVM, timerVM: timerVM, goalVM: goalVM, displayedTasks: displayedTasks)
                     
                     HStack {
                         Button(action: {
@@ -214,32 +224,32 @@ struct DailyTasksView: View {
             }
             .background(Color.gray.opacity(0.15))
             .onAppear {
-                taskVM.fetchTasks()
+                taskVM.fetchTasksForDate(for: date)
                 timerVM.updateAllRunningTaskTimers()
                 timerVM.setAllTimerVals()
                 timerVM.beginProgressUpdates(for: Date())
 //                timerVM.countDownTimer(task: taskVM.newTask, seconds: 10, minutes: 1, hours: 0)
 //                displayedTasks = taskVM.sortedTasksAll(allTasks: taskVM.savedTasks, option: selectedSort)
             }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    NavigationLink(destination: GoalsView(taskVM: taskVM, timerVM: timerVM, goalVM: goalVM)) {
-                        Text("Goals")
-                    }
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    NavigationLink(destination: CalendarView(taskVM: taskVM, timerVM: timerVM, goalVM: goalVM)) {
-                        Image(systemName: "calendar")
-                            .font(.title)
-                            .foregroundColor(.blue)
-                    }
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    NavigationLink(destination: Text("goal")) {
-                        Text("Tasks")
-                    }
-                }
-            }
+//            .toolbar {
+//                ToolbarItem(placement: .navigationBarLeading) {
+//                    NavigationLink(destination: GoalsView(taskVM: taskVM, timerVM: timerVM, goalVM: goalVM)) {
+//                        Text("Goals")
+//                    }
+//                }
+//                ToolbarItem(placement: .navigationBarTrailing) {
+//                    NavigationLink(destination: Text("goal")) {
+//                        Image(systemName: "calendar")
+//                            .font(.title)
+//                            .foregroundColor(.blue)
+//                    }
+//                }
+//                ToolbarItem(placement: .navigationBarTrailing) {
+//                    NavigationLink(destination: Text("goal")) {
+//                        Text("Tasks")
+//                    }
+//                }
+//            }
 //            .onChange(of: taskVM.savedTasks) {
 //                displayedTasks = taskVM.sortedTasksAll(allTasks: taskVM.savedTasks, option: selectedSort)
 //            }
@@ -263,21 +273,21 @@ struct DailyTasksView: View {
 //                                            .padding(.leading)
 //                                            .font(.body.bold())
 //                                            .foregroundColor(.blue)
-//                
+//
 //                                            Spacer()
 //                Button(action: {
 //                    withAnimation(.easeInOut(duration: 0.2)) {
 //                        isCompactView.toggle()
 //                    }
 //                }) {
-//                    
+//
 //                    if isCompactView {
 //                        Image(systemName: "rectangle")
-//                        
+//
 //                         } else {
 //                            Image(systemName: "rectangle")
 //                                 .font(.title2)
-//                            
+//
 //                        }
 ////                                                       .font(.title2)
 ////                                                   } else {
@@ -285,10 +295,10 @@ struct DailyTasksView: View {
 ////
 ////                                               }
 //                }
-//                
+//
 //                Spacer()
 //                Button(action: {
-//                    
+//
 //                    showCreateTask.toggle()
 //                }) {
 //                    Image(systemName: "plus")
@@ -303,18 +313,12 @@ struct DailyTasksView: View {
 //            .background(Color.gray.opacity(0.15))
 //            .sheet(item: $selectedTaskForSheet) { task in
 //                IncrementView(task: task, taskVM: taskVM)
-//                
+//
 //            }
-        }
+        
         
        
         
         
     }
 }
-
-//#Preview {
-//    
-//    DailyTasksView()
-//    
-//}

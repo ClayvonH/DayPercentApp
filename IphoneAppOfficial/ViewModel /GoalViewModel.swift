@@ -15,6 +15,7 @@ class GoalViewModel: ObservableObject {
     @Published var savedGoals: [Goal] = []
     
     
+    
     func fetchGoals() {
         let request = NSFetchRequest<Goal>(entityName: "Goal")
         print("fetched goals")
