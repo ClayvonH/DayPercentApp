@@ -8,6 +8,8 @@
 import SwiftUI
 
 struct EditTaskView: View {
+    @Environment(\.colorScheme) var colorScheme
+    @State var date: Date?
     @State var goal: Goal?
     @ObservedObject var task: Task
     @Binding var isEditView: Bool
@@ -29,8 +31,8 @@ struct EditTaskView: View {
                 }) {
                     Image(systemName: "minus")
                         .foregroundStyle(.red)
-                        .frame(width: 20, height: 20)
-                        .background(Color.white)
+                        .frame(width: 30, height: 30)
+                        .background(colorScheme == .dark ? .gray.opacity(0.20) : .white)
                         .clipShape(Circle())
                 }
                 .font(.body.bold())
@@ -39,29 +41,47 @@ struct EditTaskView: View {
                     if let task = taskToDelete {
                         if task.repeating {
                             Button("Delete this task", role: .destructive) {
-                                taskVM.deleteTask(task)
-                                isEditView = false
-                                if let goal = goal {
+                                if let date = date {
+                                    taskVM.deleteTaskForDate(date: date, task: task)
+                                } else if let goal = goal {
+                                    taskVM.deleteTaskForGoal(goal: goal, task: task)
                                     goalVM.GoalElapsedTime(goal: goal)
+                                } else {
+                                    taskVM.deleteTask(task)
                                 }
+                            
+                             
                                
                                 
                             }
-                            Button("Delete all tasks with title: \(task.title ?? "")", role: .destructive) {
-                                taskVM.deleteMultipleTasks(task: task)
-                                isEditView = false
-                                if let goal = goal {
+                            Button("Delete all repeating tasks: \(task.title ?? "")", role: .destructive) {
+                                if let date = date {
+                                    taskVM.deleteRepeatingTasks(date: date, task: task)
+                                } else if let goal = goal {
+                                    taskVM.deleteRepeatingTasks(goal: goal, task: task)
                                     goalVM.GoalElapsedTime(goal: goal)
+                                   
+                                } else {
+                                    taskVM.deleteRepeatingTasks(task: task)
                                 }
+                            
+                              
+                                
+                                
                                
                             }
                         } else {
-                            Button("Delete \(task.title ?? "no title")", role: .destructive) {
-                                taskVM.deleteTask(task)
+                            Button("Delete: \(task.title ?? "no title")", role: .destructive) {
+                                if let date = date {
+                                    taskVM.deleteTaskForDate(date: date, task: task)
+                                } else {
+                                    taskVM.deleteTask(task)
+                                }
                                 if let goal = goal {
                                     goalVM.GoalElapsedTime(goal: goal)
+                                    taskVM.fetchTasks(for: goal)
                                 }
-                                isEditView = false
+                              
 //                                displayedTasks = taskVM.sortedTasksAll(allTasks: displayedTasks, option: selectedSort)
                                 
                             }

@@ -17,6 +17,7 @@ import SwiftUI
 import CoreData
 
 struct CreateTaskView: View {
+    @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) private var dismiss
     @State var newTask: Task?
 //    @ObservedObject var task: Task
@@ -53,6 +54,9 @@ struct CreateTaskView: View {
     @State private var showEmptyTitleAlert = false
     
     @State private var showSheet = false
+    @State private var showDateAndTimer = false
+    @State private var showDateOnly = false
+    @State private var dateOnly = false
 
     
     func toggle(_ day: Weekday) {
@@ -113,7 +117,10 @@ struct CreateTaskView: View {
                         TextField("Enter task Title", text: $taskTitle)
                             .padding(.leading)
                             .frame(maxWidth: titleIsFocused ? 320 : 395, minHeight: 44)
-                            .background(Color(.systemGray6))
+                            .font(.title)
+                            .bold()
+                            .foregroundColor(colorScheme == .dark ? .white : .black)
+                            .background(colorScheme == .dark ? Color.gray.opacity(0.2) : Color.white)
                             .focused($titleIsFocused)
                         
                         if titleIsFocused {
@@ -198,13 +205,68 @@ struct CreateTaskView: View {
                         .bold()
                         .padding(.trailing, 10)
                     
-                    DatePicker("Select Date", selection: $selectedDate)
-                        .padding(.horizontal)
-                        .onTapGesture {
-                            titleIsFocused = false
+                    HStack {
+                        Spacer()
+                        Button(action: {
+                            showDateAndTimer.toggle()
+                            showDateOnly = false
+                            dateOnly = false
+                            
+                        }, label: {
+                            Text("Date & Time")
+                                .contentShape(Rectangle())
+                        })
+                        .frame(width: 150,height: 35)
+                        .foregroundStyle(colorScheme == .dark ? .white : .black)
+                        .background(colorScheme == .dark ? Color.gray.opacity(0.4) : Color.gray.opacity(0.2))
+                        .cornerRadius(15)
+                        
+                        Text("Or")
+                        
+                        Button(action: {
+                            showDateOnly.toggle()
+                            showDateAndTimer = false
+                            dateOnly = true
+                        }, label: {
+                            Text("Date Only")
+                                .contentShape(Rectangle())
+                        })
+                        .frame(width: 150,height: 35)
+                        .foregroundStyle(colorScheme == .dark ? .white : .black)
+                        .background(colorScheme == .dark ? Color.gray.opacity(0.4) : Color.gray.opacity(0.2))
+                        .cornerRadius(15)
+                        
+                       Spacer()
+                    }
+                    .frame(maxWidth: .infinity)
+                    
+                    if showDateAndTimer {
+                        
+                        DatePicker("Select Date", selection: $selectedDate)
+                            .padding(.horizontal)
+                            .onTapGesture {
+                                titleIsFocused = false
+                            }
+                    }
+                    
+                    
+                    if showDateOnly {
+                        HStack {
+                            Spacer()
+                            Text("Select Date")
+                                .padding(.trailing)
+                            DatePicker(
+                                "Select Date",
+                                selection: $selectedDate,
+                                displayedComponents: [.date] // only date, no time
+                            )
+                            .datePickerStyle(.compact) // rectangular field only
+                            .labelsHidden()
+                            Spacer()
                         }
-                    
-                    
+                        .frame(maxWidth: .infinity)
+                    }
+                  
                     
                     Button(action: {
                         
@@ -213,12 +275,11 @@ struct CreateTaskView: View {
                             return
                         }
                         
-                        guard !taskTitle.isEmpty else { return }
                         if selectedWeekdays.isEmpty {repeatingTasks = false}
                         
                         if let goal = goal {
                             if repeatingTasks == false {
-                                let task = goalVM.addTaskToGoalTwo(goalr: goal, title: taskTitle, dueDate: selectedDate)
+                                let task = goalVM.addTaskToGoalTwo(goalr: goal, title: taskTitle, dueDate: selectedDate, dateOnly: dateOnly)
                                 newTask = task
                                 showTimerSelectView = true
                             } else {
@@ -234,13 +295,13 @@ struct CreateTaskView: View {
                             }
                         } else {
                             if repeatingTasks == false {
-                                let task = taskVM.createTaskAndReturn(title: taskTitle, dueDate: selectedDate)
+                                let task = taskVM.createTaskAndReturn(title: taskTitle, dueDate: selectedDate, dateOnly: dateOnly)
                                 newTask = task
                                 showTimerSelectView = true
                             } else {
                                 let newDates = taskVM.generateDates(for: selectedWeekdays, until: selectedDate, usingTimeFrom: selectedDate)
                                 
-                                let task = taskVM.createTaskAndReturn(title: taskTitle, dueDate: selectedDate)
+                                let task = taskVM.createTaskAndReturn(title: taskTitle, dueDate: selectedDate, dateOnly: dateOnly)
                                 taskVM.repeatingTrue(task: task)
                                 taskVM.repeatTask(task: task, dates: newDates)
                                 newTask = task
@@ -273,14 +334,13 @@ struct CreateTaskView: View {
                             
                             Text("CANCEL")
                                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .foregroundColor(colorScheme == .dark ? .white : .black)
+                            
                                 .contentShape(Rectangle())
                         })
-                        
                         .frame(width: 150,height: 40)
-                        
-                        .foregroundStyle(.black)
-                        
-                        .background(Color.gray.opacity(0.2))
+                        .foregroundStyle(colorScheme == .dark ? .white : .black)
+                        .background(colorScheme == .dark ? Color.gray.opacity(0.4) : Color.gray.opacity(0.2))
                         .cornerRadius(15)
                         
                         .padding(.top)
@@ -291,6 +351,8 @@ struct CreateTaskView: View {
                     
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .padding(.top, 30)
+          
                 
                 .padding(.horizontal, 20)
                 
@@ -313,6 +375,8 @@ struct CreateTaskView: View {
                     Button("OK", role: .cancel) { }
                 }
             }
+        .background(colorScheme == .dark ? .gray.opacity(0.15) : .gray.opacity(0.15))
+        .navigationBarHidden(true)
             
         } else {
             
@@ -331,6 +395,7 @@ struct CreateTaskView: View {
         
         
     }
+       
 
 
         

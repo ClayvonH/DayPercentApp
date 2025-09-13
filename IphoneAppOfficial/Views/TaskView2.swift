@@ -440,19 +440,19 @@ struct TaskView2: View {
 }
 
 
-#Preview {
-    let context = PersistenceController.preview.container.viewContext
-    let mockTask = Task(context: context)
-    mockTask.title = "Preview Task"
-    let mockTimer = TimerEntity(context: context)
-    mockTimer.elapsedTime = 42
-    mockTimer.cdTimerEndDate = Date().addingTimeInterval(100)
-    mockTimer.cdTimerStartDate = Date()
-    mockTimer.countdownTimer = 100
-    mockTimer.countdownNum = 100
-    mockTimer.isRunning = true
-    mockTask.timer = mockTimer
-
-    
-    return TaskView(taskVM: TaskViewModel(), timerVM: TimerViewModel(taskViewModel: TaskViewModel(), goalViewModel: GoalViewModel()), task: mockTask)
-}
+//#Preview {
+//    let context = PersistenceController.preview.container.viewContext
+//    let mockTask = Task(context: context)
+//    mockTask.title = "Preview Task"
+//    let mockTimer = TimerEntity(context: context)
+//    mockTimer.elapsedTime = 42
+//    mockTimer.cdTimerEndDate = Date().addingTimeInterval(100)
+//    mockTimer.cdTimerStartDate = Date()
+//    mockTimer.countdownTimer = 100
+//    mockTimer.countdownNum = 100
+//    mockTimer.isRunning = true
+//    mockTask.timer = mockTimer
+//
+//    
+//    return TaskView(taskVM: TaskViewModel(), timerVM: TimerViewModel(taskViewModel: TaskViewModel(), goalViewModel: GoalViewModel()), task: mockTask)
+//}

@@ -10,9 +10,13 @@ import CoreData
 
 
 struct TaskRectangularNavLink: View {
+    
+    @ObservedObject var goalVM: GoalViewModel
+    
     @ObservedObject var taskVM: TaskViewModel
     
     @ObservedObject var timerVM: TimerViewModel
+    
     
     @ObservedObject var task: Task
     
@@ -25,12 +29,11 @@ struct TaskRectangularNavLink: View {
     
     
     var body: some View {
-        NavigationLink(destination: TaskView(taskVM: taskVM, timerVM: timerVM, task: task)) {
+        NavigationLink(destination: TaskView( goalVM: goalVM, taskVM: taskVM, timerVM: timerVM, task: task)) {
             ZStack {
-                
-                
+      
                 RoundedRectangle(cornerRadius: 16)
-                    .fill(colorScheme == .dark ? Color(.gray.opacity(0.15)) : Color.white)
+                    .fill(colorScheme == .dark ? .gray.opacity(0.20) : .white)
                 HStack {
                     VStack (alignment: .leading, spacing: 7) {
                         TaskTitleView(task: task)
@@ -61,21 +64,24 @@ struct TaskRectangularNavLink: View {
                     
                    
                 }
-                .frame(maxWidth: .infinity, minHeight: 140, maxHeight: 150, alignment: .topLeading)
-                .background(Color.white)
-                
-                
+                .frame(maxWidth: .infinity, minHeight: 140, maxHeight: 140, alignment: .topLeading)
+//                .background(colorScheme == .dark ? .black.opacity(0.25) : .white)
                 
             }
+            
+            
         }
         .buttonStyle(PlainButtonStyle())
         .frame(maxWidth: .infinity, minHeight: 170, maxHeight:180)
         .padding(.horizontal, 10)
+        
+        
     
     }
 }
 
 struct TaskRectangularNavLinkSmall: View {
+    @ObservedObject var goalVM: GoalViewModel
     @ObservedObject var taskVM: TaskViewModel
     @ObservedObject var timerVM: TimerViewModel
     @ObservedObject var task: Task
@@ -85,10 +91,10 @@ struct TaskRectangularNavLinkSmall: View {
     @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
-        NavigationLink(destination: TaskView(taskVM: taskVM, timerVM: timerVM, task: task)) {
+        NavigationLink(destination: TaskView( goalVM: goalVM, taskVM: taskVM, timerVM: timerVM, task: task)) {
             ZStack(alignment: .topLeading) { // <-- Align content to top-left
                 RoundedRectangle(cornerRadius: 16)
-                    .fill(colorScheme == .dark ? Color(.gray.opacity(0.15)) : Color.white)
+                    .fill(colorScheme == .dark ? .gray.opacity(0.20) : .white)
 
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 4) {
@@ -131,6 +137,8 @@ struct TaskRectangularNavLinkSmall: View {
 }
 
 struct TaskRectangularNavLinkSimple: View {
+    @ObservedObject var goalVM: GoalViewModel
+    
     @ObservedObject var taskVM: TaskViewModel
     
     @ObservedObject var timerVM: TimerViewModel
@@ -142,12 +150,12 @@ struct TaskRectangularNavLinkSimple: View {
     
     
     var body: some View {
-        NavigationLink(destination: TaskView(taskVM: taskVM, timerVM: timerVM, task: task)) {
+        NavigationLink(destination: TaskView( goalVM: goalVM, taskVM: taskVM, timerVM: timerVM, task: task)) {
             ZStack {
                 
                 
                 RoundedRectangle(cornerRadius: 16)
-                    .fill(colorScheme == .dark ? Color(.gray.opacity(0.15)) : Color.white)
+                    .fill(colorScheme == .dark ? .gray.opacity(0.20) : .white)
                 HStack {
                     VStack (alignment: .leading, spacing: 7) {
                         
@@ -173,7 +181,7 @@ struct TaskRectangularNavLinkSimple: View {
                    
                 }
                 .frame(maxWidth: .infinity, minHeight: 80, maxHeight: 100, alignment: .topLeading)
-                .background(Color.white)
+        
                 
                 
                 
@@ -188,6 +196,8 @@ struct TaskRectangularNavLinkSimple: View {
 }
 
 struct TaskRectangularNavLinkSimpleSmall: View {
+    @ObservedObject var goalVM: GoalViewModel
+    
     @ObservedObject var taskVM: TaskViewModel
     
     @ObservedObject var timerVM: TimerViewModel
@@ -199,12 +209,12 @@ struct TaskRectangularNavLinkSimpleSmall: View {
     
     
     var body: some View {
-        NavigationLink(destination: TaskView(taskVM: taskVM, timerVM: timerVM, task: task)) {
+        NavigationLink(destination: TaskView( goalVM: goalVM, taskVM: taskVM, timerVM: timerVM, task: task)) {
             ZStack {
                 
                 
                 RoundedRectangle(cornerRadius: 16)
-                    .fill(colorScheme == .dark ? Color(.gray.opacity(0.15)) : Color.white)
+                    .fill(colorScheme == .dark ? .gray.opacity(0.20) : .white)
                 HStack {
                     VStack (alignment: .leading, spacing: 7) {
                         
@@ -226,7 +236,7 @@ struct TaskRectangularNavLinkSimpleSmall: View {
                    
                 }
                 .frame(maxWidth: .infinity, maxHeight: 50, alignment: .topLeading)
-                .background(Color.white)
+          
                 
                 
                 
@@ -243,6 +253,7 @@ struct TaskRectangularNavLinkSimpleSmall: View {
 
 
 struct TaskTitleView: View {
+    @Environment(\.colorScheme) var colorScheme
     @ObservedObject var task: Task
 
     
@@ -251,12 +262,13 @@ struct TaskTitleView: View {
         
         Text("\(task.title ?? "")")
             .font(.system(size: 24, weight: .bold, design: .default))
-            .foregroundColor(Color.black)
+            .foregroundColor(colorScheme == .dark ? .white : .black)
+//            .fill(colorScheme == .dark ? .gray.opacity(0.30) : .white)
     }
 }
 
 struct TaskElapsedTimeView: View {
-    
+    @Environment(\.colorScheme) var colorScheme
     @ObservedObject var task: Task
     @ObservedObject var timerVM: TimerViewModel
     
@@ -271,13 +283,13 @@ struct TaskElapsedTimeView: View {
             Text("\(timerVM.countDownViewElapsed[task.objectID]?.asHoursMinutesSeconds() ?? "")")
             .font(.title2)
             .bold()
-                .foregroundColor(Color.black)
+            .foregroundColor(colorScheme == .dark ? .white : .black)
         }
     
 }
 
 struct TaskElapsedTimeViewSmall: View {
-    
+    @Environment(\.colorScheme) var colorScheme
     @ObservedObject var task: Task
     @ObservedObject var timerVM: TimerViewModel
     
@@ -292,13 +304,13 @@ struct TaskElapsedTimeViewSmall: View {
             Text("\(timerVM.countDownViewElapsed[task.objectID]?.asHoursMinutesSeconds() ?? "")")
             .font(.headline)
             .bold()
-                .foregroundColor(Color.black)
+            .foregroundColor(colorScheme == .dark ? .white : .black)
         }
     
 }
 
 struct TaskRemainingTimeView: View {
-    
+    @Environment(\.colorScheme) var colorScheme
     @ObservedObject var task: Task
     @ObservedObject var timerVM: TimerViewModel
     
@@ -307,18 +319,15 @@ struct TaskRemainingTimeView: View {
     
     
     var body: some View {
-        
-       
             
             Text("Remaining: \(timerVM.countDownView[task.objectID]?.asHoursMinutesSeconds() ?? "")")
-            
-                .foregroundColor(Color.black)
+                     .foregroundColor(colorScheme == .dark ? .white : .black)
         }
     
 }
 
 struct TaskPercentView: View {
-    
+    @Environment(\.colorScheme) var colorScheme
     @ObservedObject var task: Task
     @ObservedObject var timerVM: TimerViewModel
     
@@ -331,13 +340,13 @@ struct TaskPercentView: View {
        
             
         Text("Progress: \(Int(timerVM.percentageValues[task.objectID] ?? 0))%")
-                .foregroundColor(Color.black)
+            .foregroundColor(colorScheme == .dark ? .white : .black)
         }
     
 }
 
 struct TaskDateTimeView: View {
-    
+    @Environment(\.colorScheme) var colorScheme
     @ObservedObject var task: Task
     @ObservedObject var timerVM: TimerViewModel
     
@@ -350,7 +359,10 @@ struct TaskDateTimeView: View {
        
             
         if let dateDue = task.dateDue {
-            Text(dateDue.formatted(.dateTime.hour(.defaultDigits(amPM: .abbreviated)).minute()))
+            if task.dateOnly == false {
+                Text(dateDue.formatted(.dateTime.hour(.defaultDigits(amPM: .abbreviated)).minute()))
+            }
+          
         }
         }
     
@@ -370,12 +382,14 @@ struct TaskProgressBarView: View {
         
         if let timerTask = task.timer {
             
-            
             HStack {
-                ProgressView(value: timerVM.countDownViewElapsed[task.objectID] ?? 0.0, total: timerTask.countdownNum)
-                //                    .frame(width: isEditView  == true ? 100 : 120, height: 12)
-                    .tint(timerTask.isRunning == true ? Color.red : Color.accentColor)
-                    .clipShape(Capsule())
+                ProgressView(
+                    value: min(max(timerVM.countDownViewElapsed[task.objectID] ?? 0.0, 0), timerTask.countdownNum),
+                    total: timerTask.countdownNum
+                )
+                .tint(timerTask.isRunning ? .red : .accentColor)
+                .clipShape(Capsule())
+
                 
                 //                    .animation(.none, value: isCompactView)
                 
@@ -390,11 +404,9 @@ struct TaskProgressBarView: View {
 
 struct TaskProgressBarViewSmall: View {
     
+    @Environment(\.colorScheme) var colorScheme
     @ObservedObject var task: Task
     @ObservedObject var timerVM: TimerViewModel
-    
-    
-    
     
     
     var body: some View {
@@ -411,6 +423,7 @@ struct TaskProgressBarViewSmall: View {
                 //                    .animation(.none, value: isCompactView)
                 
                 Text("\(Int(timerTask.percentCompletion))%")
+                    .foregroundColor(colorScheme == .dark ? .white : .black)
                 //                    .animation(.none, value: isCompactView)
             }
         }

@@ -1,16 +1,15 @@
 //
-//  GoalsView.swift
+//  GoalsDueView.swift
 //  IphoneAppOfficial
 //
-//  Created by Clayvon Hatton on 8/12/25.
+//  Created by Clayvon Hatton on 9/4/25.
 //
-
-
 import SwiftUI
 import CoreData
 
-struct GoalsView: View {
+struct GoalsDueView: View {
     @Environment(\.colorScheme) var colorScheme
+    @State var date: Date
     @ObservedObject var taskVM: TaskViewModel
     @ObservedObject var timerVM: TimerViewModel
     @ObservedObject var goalVM: GoalViewModel
@@ -25,17 +24,24 @@ struct GoalsView: View {
     var body: some View {
       
             VStack(alignment: .leading, spacing: 16) {
-                
-                Text("Goals")
-                    .font(.largeTitle.bold())
-                    .fontDesign(.serif)
-                    .padding(.horizontal)
-                    .foregroundStyle(.primary)
-                
+                HStack {
+                    Text("Goal Due:")
+                        .font(.title.bold())
+                        .fontDesign(.serif)
+                        .padding(.horizontal)
+                        .foregroundStyle(.primary)
+                    
+                    Text("\(taskVM.formatDate(date))")
+                        .font(.title.bold())
+                        .fontDesign(.serif)
+                        .padding(.horizontal)
+                        .foregroundStyle(.primary)
+                    
+                }
                 ScrollView {
                     VStack(alignment: .center, spacing: 5) {
-                        ForEach(goalVM.savedGoals) { goal in
-                            if !goal.isComplete {
+                        ForEach(goalVM.dateGoals) { goal in
+                 
                                 
                                 
                                 HStack {
@@ -49,7 +55,7 @@ struct GoalsView: View {
                                                 Image(systemName: "minus")
                                                     .foregroundStyle(.red)
                                                     .frame(width: 30, height: 30)
-                                                    .background(colorScheme == .dark ? .gray.opacity(0.20) : .white)
+                                                    .background(Color.white)
                                                     .clipShape(Circle())
                                             }
                                             
@@ -75,7 +81,7 @@ struct GoalsView: View {
                                         ZStack {
                                             
                                             RoundedRectangle(cornerRadius: 16)
-                                                .fill(colorScheme == .dark ? Color(.gray.opacity(0.20)) : Color.white)
+                                                .fill(colorScheme == .dark ? Color(.gray.opacity(0.1)) : Color.white)
                                             
                                             
                                             VStack {
@@ -135,7 +141,7 @@ struct GoalsView: View {
                                                             
                                                             Text(" \(Int(goal.percentComplete))%")
                                                             
-                                                        
+                                                                .foregroundColor(.black)
                                                         }
                                                         
                                                         
@@ -181,7 +187,7 @@ struct GoalsView: View {
                                 
                             }
                             
-                        }
+                        
                     }
                     
                     
@@ -191,71 +197,74 @@ struct GoalsView: View {
                 
                 HStack {
                     
-                    Button(action: {
-                        isEditView.toggle()
-                    }, label: {
-                        if isEditView == false {
-                            Text("Delete Goal")
-                        } else {
-                            Text("Done")
-                        }
-                    })
-                    Spacer()
+//                    Button(action: {
+//                        isEditView.toggle()
+//                    }, label: {
+//                        Text("Delete Goal")
+//                    })
+//                    Spacer()
                     
-                    Button(action: {
-                        showCreateGoal = true
-                    }, label: {
-                        Text("Create Goal")
-                    })
+//                    Button(action: {
+//                        showCreateGoal = true
+//                    }, label: {
+//                        Text("Create Goal")
+//                    })
                 }
                 .frame(maxWidth: .infinity, alignment: .trailing)
                 .padding(.trailing, 20)
                 .padding(.leading, 20)
                 
-                .toolbar {
-//                    ToolbarItem(placement: .navigationBarLeading) {
-//                        NavigationLink(destination: GPTDailyTaskVisuals(vm: vm)) {
-//                            Text("Daily Tasks")
-//                        }
-//                    }
+//                .toolbar {
+////                    ToolbarItem(placement: .navigationBarLeading) {
+////                        NavigationLink(destination: GPTDailyTaskVisuals(vm: vm)) {
+////                            Text("Daily Tasks")
+////                        }
+////                    }
+////                    ToolbarItem(placement: .navigationBarTrailing) {
+////                        NavigationLink(destination: CalPracticeVM(vm:vm)) {
+////                            Image(systemName: "calendar")
+////                                .font(.title)
+////                                .foregroundColor(.blue)
+////                        }
+////                    }
+////                    ToolbarItem(placement: .navigationBarTrailing) {
+////                        NavigationLink(destination: ProfileView()) {
+////                            Text("Tasks")
+////                        }
+////                    }
 //                    ToolbarItem(placement: .navigationBarTrailing) {
-//                        NavigationLink(destination: CalPracticeVM(vm:vm)) {
-//                            Image(systemName: "calendar")
-//                                .font(.title)
-//                                .foregroundColor(.blue)
-//                        }
-//                    }
-//                    ToolbarItem(placement: .navigationBarTrailing) {
-//                        NavigationLink(destination: ProfileView()) {
-//                            Text("Tasks")
-//                        }
-//                    }
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                                   NavigationLink(
-                                       destination: CompletedGoals(
-                                           taskVM: taskVM,
-                                           timerVM: timerVM,
-                                           goalVM: goalVM
-                                       )
-                                   ) {
-                                       Text("Completed Goals")
-                                           .padding(.top, 7)
-                                   }
-                               }
-                }
+//                                   NavigationLink(
+//                                       destination: CompletedGoals(
+//                                           taskVM: taskVM,
+//                                           timerVM: timerVM,
+//                                           goalVM: goalVM
+//                                       )
+//                                   ) {
+//                                       Text("Completed Goals")
+//                                           .padding(.top, 7)
+//                                   }
+//                               }
+//                }
                 
             }
-            .sheet(isPresented: $showCreateGoal) {
-                CreateGoalView(goalVM: goalVM)
-                    }
+//            .sheet(isPresented: $showCreateGoal) {
+//                CreateGoalView(goalVM: goalVM)
+//                    }
             .padding(.top)
-            .background(colorScheme == .dark ? .black.opacity(0.10) : .gray.opacity(0.15))
+            .background(
+                LinearGradient(
+                    colors: colorScheme == .dark ? [Color.gray.opacity(0.15)] : [Color(.systemGray6), Color(.systemGray5)],
+                    startPoint: .top, endPoint: .bottom
+                )
+                .ignoresSafeArea()
+            )
             
             
             
         
         .onAppear{
-            goalVM.fetchGoals()
+//            goalVM.fetchGoals()
+            goalVM.fetchGoalsForDate(for: date)
             goalVM.goalElapsedTimeAll(goals: goalVM.savedGoals)
             
         }
@@ -267,7 +276,8 @@ struct GoalsView: View {
 }
 
 //#Preview {
-//    
-//    
+//
+//
 ////    GoalsView(goalVM: GoalViewModel())
 //}
+

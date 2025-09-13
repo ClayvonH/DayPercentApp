@@ -16,6 +16,7 @@ class TaskViewModel: ObservableObject {
     @Published var savedTasks: [Task] = []
     @Published var dailyTasks: [Task] = []
     @Published var dateTasks: [Task] = []
+    @Published var goalTasks: [Task] = []
     
     
     
@@ -44,6 +45,7 @@ class TaskViewModel: ObservableObject {
     }
     
     func fetchTasksForDate(for date: Date) {
+        
         let request = NSFetchRequest<Task>(entityName: "Task")
         
         // Calculate the start and end of the day
@@ -56,20 +58,34 @@ class TaskViewModel: ObservableObject {
         
         do {
             let tasksForDate = try container.viewContext.fetch(request)
-            dailyTasks = tasksForDate
+            dateTasks = tasksForDate
             print("Fetched \(tasksForDate.count) tasks for \(date)")
         } catch {
             print("Error fetching tasks: \(error)")
         }
         
-        dateTasks = getTasks(for: date)
+//        dateTasks = getTasks(for: date)
+    }
+
+    func fetchTasks(for goal: Goal) {
+        let request = NSFetchRequest<Task>(entityName: "Task")
+        
+        // Predicate: fetch tasks where the goal relationship matches
+        request.predicate = NSPredicate(format: "goal == %@", goal)
+        
+        do {
+            let tasksForGoal = try container.viewContext.fetch(request)
+            goalTasks = tasksForGoal // or whatever array you’re using
+            print("Fetched \(tasksForGoal.count) tasks for goal: \(goal.title ?? "Unnamed Goal")")
+        } catch {
+            print("Error fetching tasks for goal: \(error)")
+        }
     }
 
     
     
-    
     func getTasks(for date: Date) -> [Task] {
-        let filtered = savedTasks.filter {
+        let filtered = dateTasks.filter {
             if let taskDate = $0.dateDue {
                 return Calendar.current.isDate(taskDate, inSameDayAs: date)
             }
@@ -101,19 +117,25 @@ class TaskViewModel: ObservableObject {
             timer.elapsedTime = timer.countdownNum
             timer.percentCompletion = 100
             timer.countdownTimer = 0
+            task.timer?.timerComplete = true
             task.isComplete = true
-          
+ 
             
             CoreDataManager.shared.saveContext()
+            checkGoalComplete(task: task)
         }
         
         else if let quantity = task.quantityval {
             incrementQuantityVal(task: task, incVal: quantity.totalQuantity)
             task.isComplete = true
+            
             CoreDataManager.shared.saveContext()
+            checkGoalComplete(task: task)
         } else {
             task.isComplete = true
+          
             CoreDataManager.shared.saveContext()
+            checkGoalComplete(task: task)
         }
     }
     
@@ -123,7 +145,10 @@ class TaskViewModel: ObservableObject {
             timer.countdownTimer = 0
             timer.percentCompletion = 100
             task.isComplete = true
+            task.timer?.timerComplete = true 
+           
             CoreDataManager.shared.saveContext()
+            checkGoalComplete(task: task)
         }
         
         if let quantity = task.quantityval {
@@ -134,24 +159,27 @@ class TaskViewModel: ObservableObject {
           
             task.isComplete = true
            CoreDataManager.shared.saveContext()
+            checkGoalComplete(task: task)
         }
     }
     
-    func createTaskAndReturn (title: String, dueDate: Date?) -> Task {
+    func createTaskAndReturn (title: String, dueDate: Date?, dateOnly: Bool = false) -> Task {
         let newTask = Task(context: container.viewContext)
         newTask.dateCreated = Date()
         newTask.title = title
         newTask.dateDue = dueDate
+        newTask.dateOnly = dateOnly
         newTask.lastActive = Date()
         CoreDataManager.shared.saveContext()
         return newTask
     }
     
-    func createTask(title: String, date: Date?) {
+    func createTask(title: String, date: Date?, dateOnly: Bool = false) {
         let newTask = Task(context: container.viewContext)
         newTask.dateCreated = Date()
         newTask.dateDue = date
         newTask.title = title
+        newTask.dateOnly = dateOnly
         CoreDataManager.shared.saveContext()
         
     }
@@ -230,7 +258,9 @@ class TaskViewModel: ObservableObject {
             newTask.goal = task.goal
             newTask.dateCreated = Date()
             newTask.dateDue = date
+            newTask.dateOnly = task.dateOnly
             newTask.lastActive = Date()
+            newTask.seriesID = task.seriesID
         }
         CoreDataManager.shared.saveContext()
         fetchTasks()
@@ -239,6 +269,7 @@ class TaskViewModel: ObservableObject {
 
     func repeatingTrue (task: Task) {
         task.repeating = true
+        task.seriesID = UUID()
         CoreDataManager.shared.saveContext()
     }
     
@@ -249,28 +280,72 @@ class TaskViewModel: ObservableObject {
         fetchTasks()
     }
     
-    func deleteMultipleTasks(task: Task) {
+    func deleteTaskForDate(date: Date, task: Task) {
+        let context = task.managedObjectContext
+        context?.delete(task) // Mark the goal for deletion
+        CoreDataManager.shared.saveContext()
+        fetchTasksForDate(for: date)
+    }
+    
+    func deleteTaskForGoal(goal: Goal, task: Task) {
+        let context = task.managedObjectContext
+        context?.delete(task) // Mark the goal for deletion
+        CoreDataManager.shared.saveContext()
+        fetchTasks(for: goal)
+    }
+    
+    
+    func deleteRepeatingTasks(date: Date? = nil, goal: Goal? = nil, task: Task) {
         guard let context = task.managedObjectContext,
-              let title = task.title else {
+              let seriesID = task.seriesID else {
             return
         }
 
-        // Fetch all tasks with the same title
+        // Fetch all tasks that share the same seriesID
         let fetchRequest: NSFetchRequest<Task> = Task.fetchRequest()
-        fetchRequest.predicate = NSPredicate(format: "title == %@", title)
+        fetchRequest.predicate = NSPredicate(format: "seriesID == %@", seriesID as CVarArg)
 
         do {
             let matchingTasks = try context.fetch(fetchRequest)
-            for task in matchingTasks {
-                if task.isComplete == false {
-                    context.delete(task)
+            for t in matchingTasks {
+                if !t.isComplete {
+                    context.delete(t)
                 }
             }
             CoreDataManager.shared.saveContext()
         } catch {
             print("Failed to fetch tasks for deletion: \(error)")
         }
-        fetchTasks()
+        if let date = date {
+            fetchTasksForDate(for: date)
+            print("fetching tasks for date")
+        } else if let goal = goal {
+            fetchTasks(for: goal)
+            print("fetching tasks for goal")
+        }
+        else {
+            fetchTasks()
+            print("fetching all tasks ")
+        }
+    }
+
+    
+
+    func deleteMultipleTasksInView(tasks: [Task], date: Date? = nil, goal: Goal? = nil) {
+        guard let context = tasks.first?.managedObjectContext else { return }
+
+        for task in tasks {
+            context.delete(task)
+        }
+
+        CoreDataManager.shared.saveContext()
+        if let date = date {
+            fetchTasksForDate(for: date)
+        }
+        
+        if let goal = goal {
+            fetchTasks(for: goal)
+        }
     }
     
     func addQuantityVal( task: Task, qVal: Double ) {
@@ -323,6 +398,16 @@ class TaskViewModel: ObservableObject {
         }
     }
     
+    func updateTotalQuantityValue(task: Task, totalQuantity: Double) {
+        task.quantityval?.totalQuantity = totalQuantity
+        let current = task.quantityval?.currentQuantity ?? 0
+        task.quantityval?.totalTimeEstimate = (task.quantityval?.totalQuantity ?? 0) * (task.quantityval?.timePerQuantityVal ?? 0)
+        task.quantityval?.timeElapsed = (task.quantityval?.currentQuantity ?? 0) * (task.quantityval?.timePerQuantityVal ?? 0)
+        CoreDataManager.shared.saveContext()
+        incrementQuantityVal(task: task, incVal: current)
+        print("total time estimate \(task.quantityval?.totalTimeEstimate ?? 0)")
+    }
+    
     func getQuantityPercentage(task: Task) {
         let total = task.quantityval?.totalQuantity ?? 0
         let current = task.quantityval?.currentQuantity ?? 0
@@ -332,6 +417,10 @@ class TaskViewModel: ObservableObject {
     }
     
     func incrementQuantityVal( task: Task, incVal: Double) {
+        if task.isComplete && incVal < task.quantityval?.totalQuantity ?? 0 {
+            task.isComplete = false
+        }
+        
         task.quantityval?.currentQuantity = incVal
         task.quantityval?.percentCompletion = min((task.quantityval?.currentQuantity ?? 0 / (task.quantityval?.totalQuantity ?? 0)) * 100, 100)
         task.quantityval?.timeElapsed = (task.quantityval?.currentQuantity ?? 0) * (task.quantityval?.timePerQuantityVal ?? 0)
@@ -355,6 +444,19 @@ class TaskViewModel: ObservableObject {
             }
         }
         showQuantityValData(task: task)
+        
+        if let goal = task.goal {
+              let tasks = goal.task as? Set<Task> ?? []
+              let allComplete = tasks.allSatisfy { $0.isComplete }
+              
+              if allComplete && !goal.isComplete {
+                  goal.isComplete = true
+                  goal.dateCompleted = Date()
+                  CoreDataManager.shared.saveContext()
+                  notifyGoalCompleted(goal)
+              }
+          }
+        
         print("estimated time elapsed is \(task.quantityval?.timeElapsed ?? 0)")
         print("total time combined for quantity is \(task.quantityval?.totalTimeEstimate ?? 0)")
         print("estimated time remaining for quantity is \(task.quantityval?.estimatedTimeRemaining ?? 0)")
@@ -372,7 +474,6 @@ class TaskViewModel: ObservableObject {
         print(" time per val \(task.quantityval?.timePerQuantityVal ?? 0)")
         showQuantityValData(task: task)
         CoreDataManager.shared.saveContext()
-
 
     }
     
@@ -420,14 +521,18 @@ class TaskViewModel: ObservableObject {
     }
     
     func sortedTasks(goal: Goal, option: TaskSortOption) -> [Task] {
-        let tasks = (goal.task as? Set<Task>) ?? []
+        let tasks = goalTasks
         
         switch option {
         case .title:
-            return tasks.sorted { ($0.title ?? "") < ($1.title ?? "") }
+              return tasks.sorted {
+                  ($0.title ?? "").localizedCaseInsensitiveCompare($1.title ?? "") == .orderedAscending
+              }
             
         case .zaTitle:
-            return tasks.sorted { ($0.title ?? "") > ($1.title ?? "") }
+            return tasks.sorted {
+                ($0.title ?? "").localizedCaseInsensitiveCompare($1.title ?? "") == .orderedDescending
+            }
             
         case .dueDate:
             return tasks.sorted { ($0.dateDue ?? .distantFuture) < ($1.dateDue ?? .distantFuture) }
@@ -454,10 +559,14 @@ class TaskViewModel: ObservableObject {
         
         switch option {
         case .title:
-            return tasks.sorted { ($0.title ?? "") < ($1.title ?? "") }
+              return tasks.sorted {
+                  ($0.title ?? "").localizedCaseInsensitiveCompare($1.title ?? "") == .orderedAscending
+              }
             
         case .zaTitle:
-            return tasks.sorted { ($0.title ?? "") > ($1.title ?? "") }
+            return tasks.sorted {
+                ($0.title ?? "").localizedCaseInsensitiveCompare($1.title ?? "") == .orderedDescending
+            }
             
         case .dueDate:
             return tasks.sorted { ($0.dateDue ?? .distantFuture) < ($1.dateDue ?? .distantFuture) }
@@ -479,14 +588,18 @@ class TaskViewModel: ObservableObject {
     }
     
     func sortedTasksDate(date: Date, option: TaskSortOption) -> [Task] {
-        let tasks = getTasks(for: date)
+        let tasks = dateTasks
         
         switch option {
         case .title:
-            return tasks.sorted { ($0.title ?? "") < ($1.title ?? "") }
+              return tasks.sorted {
+                  ($0.title ?? "").localizedCaseInsensitiveCompare($1.title ?? "") == .orderedAscending
+              }
             
         case .zaTitle:
-            return tasks.sorted { ($0.title ?? "") > ($1.title ?? "") }
+            return tasks.sorted {
+                ($0.title ?? "").localizedCaseInsensitiveCompare($1.title ?? "") == .orderedDescending
+            }
             
         case .dueDate:
             return tasks.sorted { ($0.dateDue ?? .distantFuture) < ($1.dateDue ?? .distantFuture) }
@@ -549,5 +662,76 @@ class TaskViewModel: ObservableObject {
 
         CoreDataManager.shared.saveContext()
         print("\(task.dateDue ?? Date())")
+    }
+    
+    func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MM/dd/yy"
+        return formatter.string(from: date)
+    }
+    
+    func notifyGoalCompleted(_ goal: Goal) {
+            let content = UNMutableNotificationContent()
+            content.title = "Goal Complete 🎯"
+            content.body = "\(goal.title ?? "A goal") has been completed! Great work!"
+            content.sound = .default
+            
+            let request = UNNotificationRequest(
+                identifier: goal.objectID.uriRepresentation().absoluteString,
+                content: content,
+                trigger: nil
+            )
+            
+            UNUserNotificationCenter.current().add(request) { error in
+                if let error = error {
+                    print("Failed to schedule goal notification: \(error.localizedDescription)")
+                }
+            }
+        }
+    
+    func checkGoalComplete(task: Task) {
+        
+        if let goal = task.goal {
+              let tasks = goal.task as? Set<Task> ?? []
+              let allComplete = tasks.allSatisfy { $0.isComplete }
+              
+              if allComplete && !goal.isComplete {
+                  goal.isComplete = true
+                  goal.dateCompleted = Date()
+                  CoreDataManager.shared.saveContext()
+                  notifyGoalCompleted(goal)
+              }
+          }
+        
+    }
+    
+    func GoalElapsedTime(goal: Goal) {
+        var totalElapsed: Double = 0.0
+        var overallTime: Double = 0.0
+
+        // Safely cast to NSSet and convert to [Task]
+        guard let taskSet = goal.task else { return }
+        let tasks = taskSet.compactMap { $0 as? Task }
+
+        for task in tasks {
+            if let timer = task.timer {
+                totalElapsed += timer.elapsedTime
+                overallTime += timer.countdownNum
+            }
+
+            if let quantity = task.quantityval {
+                totalElapsed += quantity.timeElapsed
+                overallTime += quantity.totalTimeEstimate
+            }
+        }
+
+        goal.combinedElapsed = totalElapsed
+        goal.overAllTimeCombined = overallTime
+
+        let percentage = overallTime > 0 ? (totalElapsed / overallTime) * 100 : 0
+        goal.percentComplete = percentage
+        goal.estimatedTimeRemaining = max(0, overallTime - totalElapsed)
+
+        CoreDataManager.shared.saveContext()
     }
 }

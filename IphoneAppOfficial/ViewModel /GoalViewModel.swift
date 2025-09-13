@@ -13,6 +13,7 @@ class GoalViewModel: ObservableObject {
     let container = CoreDataManager.shared.container
     
     @Published var savedGoals: [Goal] = []
+    @Published var dateGoals: [Goal] = []
     
     
     
@@ -28,6 +29,30 @@ class GoalViewModel: ObservableObject {
         
     }
     
+    func fetchGoalsForDate(for date: Date) {
+        
+        let request = NSFetchRequest<Goal>(entityName: "Goal")
+        
+        // Calculate the start and end of the day
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: date)
+        guard let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)?.addingTimeInterval(-1) else { return }
+        
+        // Predicate to fetch tasks within that day
+        request.predicate = NSPredicate(format: "dateDue >= %@ AND dateDue <= %@", startOfDay as NSDate, endOfDay as NSDate)
+        
+        do {
+            let goalsForDate = try container.viewContext.fetch(request)
+            dateGoals = goalsForDate
+            print("Fetched \(goalsForDate.count) tasks for \(date)")
+        } catch {
+            print("Error fetching tasks: \(error)")
+        }
+        
+//        dateTasks = getTasks(for: date)
+    }
+
+    
     func addGoal(text: String, date: Date? = nil) {
         let newGoal = Goal(context: container.viewContext)
         newGoal.title = text
@@ -37,6 +62,44 @@ class GoalViewModel: ObservableObject {
         CoreDataManager.shared.saveContext()
         
         print("\(newGoal.dateDue ?? Date())")
+        
+    }
+    
+    func returnGoal(text: String, date: Date? = nil) -> Goal {
+        let newGoal = Goal(context: container.viewContext)
+        newGoal.title = text
+        
+        newGoal.dateDue = date
+        
+        CoreDataManager.shared.saveContext()
+        
+        print("\(newGoal.dateDue ?? Date())")
+        
+        return newGoal
+    }
+    
+    func addCompletedGoals() {
+        
+        let new = returnGoal(text: "test")
+        let new2 = returnGoal(text: "test2")
+        
+        new.isComplete = true
+        new2.isComplete = true
+        
+        CoreDataManager.shared.saveContext()
+        
+    }
+    
+    func changeTitle(goal: Goal, text: String) {
+        goal.title = text
+        CoreDataManager.shared.saveContext()
+        
+    }
+    
+    func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MM/dd/yy"
+        return formatter.string(from: date)
     }
     
     func GoalElapsedTime(goal: Goal) {
@@ -125,21 +188,39 @@ class GoalViewModel: ObservableObject {
         newTask.goal = goalr
         newTask.timer = newTimer
         newTask.lastActive = Date()
+        goalr.isComplete = false
         CoreDataManager.shared.saveContext()
+        fetchGoals()
         
     }
     
-    func addTaskToGoalTwo(goalr: Goal, title: String, dueDate: Date?) -> Task {
+    func addTaskToGoalTwo(goalr: Goal, title: String, dueDate: Date?, dateOnly: Bool = false) -> Task {
         let newTask = Task(context: goalr.managedObjectContext!)
         newTask.dateCreated = Date()
         newTask.title = title
         newTask.goal = goalr
         newTask.dateDue = dueDate
+        newTask.dateOnly = dateOnly
         goalr.addToTask(newTask)
         newTask.lastActive = Date()
+        goalr.isComplete = false
         CoreDataManager.shared.saveContext()
+        fetchGoals()
         return newTask
+      
     }
+    
+    func editDate(for goal: Goal, newDueDate: Date?) {
+        goal.dateDue = newDueDate
+        CoreDataManager.shared.saveContext()
+    }
+    
+    func completeGoal(goal: Goal) {
+        goal.isComplete = true
+        goal.dateCompleted = Date()
+        CoreDataManager.shared.saveContext()
+    }
+    
     
     
     func deleteGoal(_ goal: Goal) {

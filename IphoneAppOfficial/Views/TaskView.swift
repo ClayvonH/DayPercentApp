@@ -10,8 +10,10 @@ import SwiftUI
 import CoreData
 
 struct TaskView: View {
+    @ObservedObject var goalVM: GoalViewModel
     @ObservedObject var taskVM: TaskViewModel
     @ObservedObject var timerVM: TimerViewModel
+
     @State var task: Task
     @Environment(\.managedObjectContext) private var context
     
@@ -34,9 +36,9 @@ struct TaskView: View {
     @State private var editTitle: Bool = false
     @State private var editTimePerVal: Bool = false
     @State private var editRepeatingTasks: Bool = false
+    @State private var editProgressNumQVal: Bool = false
     @State private var showSheet: Bool = false
-    
-    
+    @State private var inputNumberText: String = ""
     @State var seconds:  Double = 0
     @State var minutes: Double = 0
     @State var hours: Double = 0
@@ -48,6 +50,9 @@ struct TaskView: View {
     @State private var repeatingTasks: Bool = false
     
     @State private var completeTaskSheet: Bool = false
+    
+    @State private var showEmptyTitleAlert = false
+    @State private var showLowQvalTotalAlert = false
     
     func toggle(_ day: Weekday) {
         if selectedWeekdays.contains(day) {
@@ -104,26 +109,58 @@ struct TaskView: View {
                             
                             if editTitle && isEditView == true {VStack {
                                 
-                                TextField("Insert New Name Here", text: $titleText)
-                                    .foregroundColor(colorScheme == .dark ? .white : .black)
-                                    .frame(height: 40)
-                                    .background(colorScheme == .dark ? .gray.opacity(0.20) : .white)
-                                
-                                Button(action: {
-                                    taskVM.updateTaskTitle(task: task, newTitle: titleText)
-                                    editTitle.toggle()
-                                    isEditView.toggle()
-                                } ) {
-                                    Text("Change Task Name")
-                                        .font(.subheadline.bold())
-                                        .padding(.horizontal, 10)
+                                HStack {
+                                    TextField(" Insert New Name Here", text: $titleText)
+                                        .font(.title)
+                                        .bold()
+                                        .foregroundColor(colorScheme == .dark ? .white : .black)
+                                        .frame(height: 40)
+                                        .background(colorScheme == .dark ? .gray.opacity(0.20) : .white)
+                                        .padding(.trailing)
+                                }
+                                .frame(maxWidth: .infinity)
+                                HStack {
+                                    Button(action: {
+                                        guard !titleText.isEmpty else {
+                                            showEmptyTitleAlert = true
+                                            return
+                                        }
+                                        taskVM.updateTaskTitle(task: task, newTitle: titleText)
+                                        editTitle.toggle()
+                                        isEditView.toggle()
+                                    } ) {
+                                        Text("Change Name")
+                                            .font(.subheadline.bold())
+                                            .padding(.horizontal, 10)
+                                        
+                                            .padding(.vertical, 8)
+                                            .frame(maxWidth: 150)
+                                            .background(Color.blue)
+                                            .foregroundColor(.white)
+                                            .cornerRadius(10)
+                                        
+                                    }
                                     
-                                        .padding(.vertical, 8)
-                                        .frame(maxWidth: 200)
-                                        .background(Color.blue)
-                                        .foregroundColor(.white)
-                                        .cornerRadius(10)
-                                    
+                                    Button(action: {
+                                        editTitle.toggle()
+                                        isEditView.toggle()
+                                    } ) {
+                                        Text("Cancel")
+                                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                            .foregroundColor(colorScheme == .dark ? .white : .black)
+                                            .contentShape(Rectangle())
+                                            .padding(.horizontal, 10)
+                                        
+                                            .padding(.vertical, 8)
+                                            .frame(maxWidth: 150)
+                                            .background(Color.gray.opacity(0.25))
+                                            .foregroundColor(.white)
+                                            .cornerRadius(10)
+                                        
+                                    }
+                                }
+                                .alert("Please enter a task title", isPresented: $showEmptyTitleAlert) {
+                                    Button("OK", role: .cancel) { }
                                 }
                             }
                                 
@@ -171,8 +208,13 @@ struct TaskView: View {
                             .font(.title2).bold()
                         
                         if let dueDate = task.dateDue {
-                            Text("\(dueDate.formatted(.dateTime.month().day().year()))  \(dueDate.formatted(.dateTime.hour().minute()))")
-                                .font(.title3)
+                            if task.dateOnly {
+                                Text("\(dueDate.formatted(.dateTime.month().day().year()))")
+                                    .font(.title3)
+                            } else {
+                                Text("\(dueDate.formatted(.dateTime.month().day().year()))  \(dueDate.formatted(.dateTime.hour().minute()))")
+                                    .font(.title3)
+                            }
                         } else {
                             Text("N/A")
                         }
@@ -191,23 +233,58 @@ struct TaskView: View {
                         }
                     }
                     .cornerRadius(10)
-                    if editDate {VStack {
-                        DatePicker("Select Date", selection: $selectedDate)
-                            .padding(.horizontal)
-                        Button(action: {
-                            taskVM.addDateDueToTask(task: task, date: selectedDate)
-                            editDate.toggle()
-                        } ) {
-                            Text("Change Due Date")
-                                .font(.subheadline.bold())
-                                .padding(.horizontal, 10)
+                    if isEditView && editDate {VStack {
+                        
+                        if task.dateOnly {
+                            HStack {
+                                Spacer()
+                                Text("Select Date")
+                                    .padding(.trailing)
+                                DatePicker(
+                                    "Select Date",
+                                    selection: $selectedDate,
+                                    displayedComponents: [.date] // only date, no time
+                                )
+                                .datePickerStyle(.compact) // rectangular field only
+                                .labelsHidden()
+                                Spacer()
+                            }
+                            .frame(maxWidth: .infinity)
                             
-                                .padding(.vertical, 8)
-                                .frame(maxWidth: 200)
-                                .background(Color.blue)
-                                .foregroundColor(.white)
-                                .cornerRadius(10)
+                            Button(action: {
+                                taskVM.addDateDueToTask(task: task, date: selectedDate)
+                                editDate.toggle()
+                            } ) {
+                                Text("Change Due Date")
+                                    .font(.subheadline.bold())
+                                    .padding(.horizontal, 10)
+                                
+                                    .padding(.vertical, 8)
+                                    .frame(maxWidth: 200)
+                                    .background(Color.blue)
+                                    .foregroundColor(.white)
+                                    .cornerRadius(10)
+                                
+                            }
+                        } else {
                             
+                            DatePicker("Select Date", selection: $selectedDate)
+                                .padding(.horizontal)
+                            Button(action: {
+                                taskVM.addDateDueToTask(task: task, date: selectedDate)
+                                editDate.toggle()
+                            } ) {
+                                Text("Change Due Date")
+                                    .font(.subheadline.bold())
+                                    .padding(.horizontal, 10)
+                                
+                                    .padding(.vertical, 8)
+                                    .frame(maxWidth: 200)
+                                    .background(Color.blue)
+                                    .foregroundColor(.white)
+                                    .cornerRadius(10)
+                                
+                            }
                         }
                     }
                     }
@@ -216,6 +293,20 @@ struct TaskView: View {
                             .font(.title2).bold()
                         Text(task.dateCreated?.formatted(.dateTime.month().day().year()) ?? "N/A")
                             .font(.title2)
+                    }
+                    
+                    if task.timer == nil && task.quantityval == nil {
+                        HStack {
+                            Text("Completed:")
+                                .font(.title2).bold()
+                            if task.isComplete == false {
+                                Text("False")
+                                    .font(.title2)
+                            } else {
+                                Text("True")
+                                    .font(.title2)
+                            }
+                        }
                     }
                     
                     if let timer = task.timer {
@@ -301,6 +392,7 @@ struct TaskView: View {
                                 }
                                 
                                 editElapsedTime.toggle()
+                                isEditView.toggle()
                             } ) {
                                 Text("Change Elapsed Time")
                                     .font(.subheadline.bold())
@@ -428,32 +520,35 @@ struct TaskView: View {
                         }
 //                        .background(Color.yellow)
                         .frame(maxWidth: .infinity)
-                        
-                        HStack {
-                            Button(action: {
-                                if timer.timerManualToggled == false && timer.isRunning == false  {
-                                    timerVM.toggleTimerOn(task: task)
-                                    task.timer?.continueFromRefresh = false
-                                    timerVM.startUITimer(task: task)
-                                } else {
-                                    timerVM.toggleTimerOff(task: task)
-                                    task.timer?.continueFromRefresh = false
-                                    timerVM.startUITimer(task: task)
+                        if task.timer?.timerComplete == false {
+                            
+                            
+                            HStack {
+                                Button(action: {
+                                    if timer.timerManualToggled == false && timer.isRunning == false  {
+                                        timerVM.toggleTimerOn(task: task)
+                                        task.timer?.continueFromRefresh = false
+                                        timerVM.startUITimer(task: task)
+                                    } else {
+                                        timerVM.toggleTimerOff(task: task)
+                                        task.timer?.continueFromRefresh = false
+                                        timerVM.startUITimer(task: task)
+                                    }
+                                }) {
+                                    Text(timer.isRunning ? "Stop Task" : "Start Task")
+                                        .font(.subheadline.bold())
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 8)
+                                        .frame(maxWidth: 150)
+                                        .background(Color.blue)
+                                        .foregroundColor(.white)
+                                        .cornerRadius(10)
                                 }
-                            }) {
-                                Text(timer.isRunning ? "Stop Task" : "Start Task")
-                                    .font(.subheadline.bold())
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 8)
-                                    .frame(maxWidth: 150)
-                                    .background(Color.blue)
-                                    .foregroundColor(.white)
-                                    .cornerRadius(10)
+                                .padding(.top, 20)
                             }
+                            .frame(maxWidth: .infinity, alignment: .center)
                             .padding(.top, 20)
                         }
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(.top, 20)
                     }
                     
                     if let quantity = task.quantityval {
@@ -465,7 +560,69 @@ struct TaskView: View {
                                 .font(.title2)
                             
                                 .foregroundColor(.primary)
+                            
+                            Spacer()
+                            if isEditView {
+                                Button(action: {
+                                    editProgressNumQVal.toggle()
+                                } ) {
+                                    Text("edit")
+                                        .font(.title2)
+                                    
+                                    
+                                    
+                                }
+                                .padding(.trailing, 20)
+                            }
                         }
+                        if editProgressNumQVal && isEditView == true {
+                            VStack {
+                                HStack {
+                                    
+                                    TextField(" Enter New Total Quantity", text: $inputNumberText)
+                                        .font(.title)
+                                        .foregroundColor(colorScheme == .dark ? .white : .black)
+                                        .background(colorScheme == .dark ? Color.gray.opacity(0.2) : Color.white)
+                                        .keyboardType(.decimalPad)
+                                        .frame(height: 35) // Makes it taller and easier to tap
+                                        .contentShape(Rectangle()) // Ensures the whole rectangle is tappable
+                                        .padding(.trailing, 10)
+                                }
+                                .frame(maxWidth: .infinity)
+                            }
+                            HStack {
+                                Spacer()
+                                Button(action: {
+                                    guard (Double(inputNumberText) ?? 0) >= (task.quantityval?.currentQuantity ?? 0) else {
+                                        showLowQvalTotalAlert = true
+                                        return
+                                    }
+                                    
+                                    taskVM.updateTotalQuantityValue(task: task, totalQuantity: Double(inputNumberText) ?? 0)
+                                    inputNumberText = ""
+                                    editProgressNumQVal.toggle()
+                                    
+                                    
+                                } ) {
+                                    Text("Submit")
+                                        .font(.subheadline.bold())
+                                        .padding(.horizontal, 10)
+                                    
+                                        .padding(.vertical, 8)
+                                        .frame(maxWidth: 200)
+                                        .background(Color.blue)
+                                        .foregroundColor(.white)
+                                        .cornerRadius(10)
+                                    
+                                }
+                                Spacer()
+                            }
+                            .alert("Number can't be lower than current quantity \(Int(task.quantityval?.currentQuantity ?? 0))", isPresented: $showLowQvalTotalAlert) {
+                                Button("OK", role: .cancel) { }
+                            }
+                        }
+                        
+                    
                         
                         HStack {
                             Text("Time Per Val:")
@@ -578,23 +735,25 @@ struct TaskView: View {
                             .clipShape(Capsule())
                             .padding(.trailing, 10)
                     
-                
-                        HStack {
-                            Button(action: {
-                                showSheet.toggle()
-                            }) {
-                                Text("Update")
-                                    .font(.subheadline.bold())
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 8)
-                                    .frame(maxWidth: 150)
-                                    .background(Color.blue)
-                                    .foregroundColor(.white)
-                                    .cornerRadius(10)
+                      
+                            
+                            HStack {
+                                Button(action: {
+                                    showSheet.toggle()
+                                }) {
+                                    Text("Update")
+                                        .font(.subheadline.bold())
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 8)
+                                        .frame(maxWidth: 150)
+                                        .background(Color.blue)
+                                        .foregroundColor(.white)
+                                        .cornerRadius(10)
+                                }
+                                .padding(.top, 20)
                             }
-                            .padding(.top, 20)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .center)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                        
                     }
                 }
 //                .padding(.horizontal, 10)
@@ -622,8 +781,17 @@ struct TaskView: View {
                     
                 }
                 Spacer()
-                Button("Complete Task") {
-                    completeTaskSheet.toggle()
+                
+                if !task.isComplete {
+                    
+                    Button("Complete Task") {
+                        
+                        if task.timer == nil && task.quantityval == nil {
+                            taskVM.completeTask(task: task)
+                        } else {
+                            completeTaskSheet.toggle()
+                        }
+                    }
                 }
             }
             .frame(height: 20)
@@ -637,7 +805,7 @@ struct TaskView: View {
         .frame(maxWidth: .infinity)
         .background(colorScheme == .dark ? Color(.black) : Color(.systemGray5))
         .sheet(isPresented: $showSheet) {
-            IncrementView(task: task, taskVM: taskVM)
+            IncrementView(task: task, taskVM: taskVM, goalVM: goalVM, timerVM: timerVM)
         }
         .alert("Number Too High", isPresented: $showAlert) {
             Button("OK", role: .cancel) { }
@@ -656,19 +824,19 @@ struct TaskView: View {
 }
 
 
-#Preview {
-    let context = PersistenceController.preview.container.viewContext
-    let mockTask = Task(context: context)
-    mockTask.title = "Preview Task"
-    let mockTimer = TimerEntity(context: context)
-    mockTimer.elapsedTime = 42
-    mockTimer.cdTimerEndDate = Date().addingTimeInterval(100)
-    mockTimer.cdTimerStartDate = Date()
-    mockTimer.countdownTimer = 100
-    mockTimer.countdownNum = 100
-    mockTimer.isRunning = true
-    mockTask.timer = mockTimer
-
-    
-    return TaskView(taskVM: TaskViewModel(), timerVM: TimerViewModel(taskViewModel: TaskViewModel(), goalViewModel: GoalViewModel()), task: mockTask)
-}
+//#Preview {
+//    let context = PersistenceController.preview.container.viewContext
+//    let mockTask = Task(context: context)
+//    mockTask.title = "Preview Task"
+//    let mockTimer = TimerEntity(context: context)
+//    mockTimer.elapsedTime = 42
+//    mockTimer.cdTimerEndDate = Date().addingTimeInterval(100)
+//    mockTimer.cdTimerStartDate = Date()
+//    mockTimer.countdownTimer = 100
+//    mockTimer.countdownNum = 100
+//    mockTimer.isRunning = true
+//    mockTask.timer = mockTimer
+//
+//    
+//    return TaskView(taskVM: TaskViewModel(), timerVM: TimerViewModel(taskViewModel: TaskViewModel(), goalViewModel: GoalViewModel()), task: mockTask)
+//}

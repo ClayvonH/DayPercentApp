@@ -10,12 +10,13 @@ import SwiftUI
 import CoreData
 
 struct GoalView: View {
+    @Environment(\.colorScheme) var colorScheme
     @ObservedObject var taskVM: TaskViewModel
     @ObservedObject var timerVM: TimerViewModel
     @ObservedObject var goalVM: GoalViewModel
     @ObservedObject var goal: Goal
     
-    @State private var isCompactView = true
+    @State private var isCompactView = false
     
     @State private var selectedTaskForSheet: Task? = nil
     @State private var isShowingSheet = false
@@ -24,22 +25,30 @@ struct GoalView: View {
     @State private var showDeleteConfirmation = false
     @State private var showDeleteAllTasksConfirmation = false
     @State private var taskToDelete: Task? = nil
+    @State private var editGoalTitle: String = ""
+    @State private var editGoalTitleButton: Bool = false
+    @State private var selectedDate: Date = Date()
+    @State private var editDueDate: Bool = false
+    @State private var editDate: Bool = false
+    @State private var showDeleteForGoalConfirmation = false
+    
+    
 
     
 //    var dummyTask: Task
     
     @State private var showCreateTask = false
     
-    @State private var selectedSort: TaskSortOption = .title
+    @State private var selectedSort: TaskSortOption = .dueDate
     
     var displayedTasks: [Task] {
         taskVM.sortedTasks(goal: goal, option: selectedSort)
     }
     
     
-    var sortedTasks: [Task] {
-        taskVM.sortedTasks(goal: goal, option: selectedSort)
-    }
+//    var sortedTasks: [Task] {
+//        taskVM.sortedTasks(goal: goal, option: selectedSort)
+//    }
     
     var completedCount: Int {
         displayedTasks.filter { $0.isComplete }.count
@@ -55,29 +64,165 @@ struct GoalView: View {
        
         
             VStack {
-                Button(action: {taskVM.deleteAllTasks()}, label: {
-                    Text("delete all tasks")
-                })
+                
+                if isEditView {
+                    Button(action: {
+                        showDeleteForGoalConfirmation.toggle()
+                    }){
+                        Text("Delete All Tasks For Goal")
+                            .foregroundColor(.red)
+                            .padding(.leading)
+                    }
+                }
+
                 ScrollViewReader { proxy in
                     
                     
                     ScrollView (){
                         
                         HStack {
-                            Text("\(goal.title ?? "No Title")")
-                                .font(.largeTitle)
-                                .bold()
-                                .padding(.leading)
-                                .id("top")
-                            
-                            
-                            Spacer()
-                            
-                            TaskSortMenu(selectedSort: $selectedSort)
+                            if isEditView {
+                                Button(action: {
+                                   editGoalTitleButton.toggle()
+                                    isEditView.toggle()
+                                }){
+                                    Text("edit")
+                                        .padding(.leading)
+                                }
+                                
+                              
+                            }
+                            if editGoalTitleButton {
+                                VStack {
+                                    TextField("Enter New Title", text: $editGoalTitle)
+                                        .padding(.leading)
+                                        .frame(minHeight: 44)
+                                        .foregroundColor(colorScheme == .dark ? .white : .black)
+                                        .background(colorScheme == .dark ? Color.gray.opacity(0.2) : Color.white)
+                                        .font(.title)
+                                        .bold()
+                                    
+                                    HStack {
+                                        Button(action: {
+                                            goalVM.changeTitle(goal: goal, text: editGoalTitle)
+                                            editGoalTitleButton.toggle()
+                                        }) {
+                                            Text("Save Changes")
+                                        }
+                                        .frame(width: 150,height: 35)
+                                        .foregroundStyle(.white)
+                                        .background(Color.blue)
+                                        .cornerRadius(15)
+                                        
+                                        Button(action: {
+                                            editGoalTitleButton.toggle()
+                                            editGoalTitle = ""
+                                        }) {
+                                            Text("Cancel")
+                                                .foregroundColor(colorScheme == .dark ? .white : .black)
+                                        }
+                                        .frame(width: 150,height: 35)
+                                        .foregroundStyle(colorScheme == .dark ? .white : .black)
+                                        .background(colorScheme == .dark ? Color.gray.opacity(0.4) : Color.gray.opacity(0.2))
+                                        .cornerRadius(15)
+                                    }
+                                }
+                            } else {
+                                
+                                Text("\(goal.title ?? "No Title")")
+                                    .font(.largeTitle)
+                                    .bold()
+                                    .padding(.leading)
+                                    .id("top")
+                                
+                                
+                                Spacer()
+                                
+                                TaskSortMenu(selectedSort: $selectedSort)
+                            }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         
                         
+                        
+                        if editDueDate {
+                            VStack {
+                            HStack {
+                                Spacer()
+                                Text("Change Due Date")
+                                    .padding(.trailing)
+                                DatePicker(
+                                    "Select Date",
+                                    selection: $selectedDate,
+                                    displayedComponents: [.date] // only date, no time
+                                )
+                                .datePickerStyle(.compact) // rectangular field only
+                                .labelsHidden()
+                                Spacer()
+                            }
+                            .frame(maxWidth: .infinity)
+                            
+                            HStack {
+                                Button(action: {
+                                    goalVM.editDate(for: goal, newDueDate: selectedDate)
+                                    editDueDate.toggle()
+                                } ) {
+                                    Text("Change Due Date")
+                                        .font(.subheadline.bold())
+                                        .padding(.horizontal, 10)
+                                    
+                                        .padding(.vertical, 8)
+                                        .frame(maxWidth: 150)
+                                        .background(Color.blue)
+                                        .foregroundColor(.white)
+                                        .cornerRadius(10)
+                                    
+                                }
+                                
+                                Button(action: {
+                                    editDueDate.toggle()
+                                   
+                                }) {
+                                    Text("Cancel")
+                                        .foregroundColor(colorScheme == .dark ? .white : .black)
+                                }
+                                .frame(width: 150,height: 35)
+                                .foregroundStyle(colorScheme == .dark ? .white : .black)
+                                .background(colorScheme == .dark ? Color.gray.opacity(0.4) : Color.gray.opacity(0.2))
+                                .cornerRadius(15)
+                            }
+                        }
+                            .padding(.bottom)
+                        } else {
+                            HStack {
+                                if isEditView {
+                                    Button(action: {
+                                       editDueDate.toggle()
+                                        isEditView.toggle()
+                                    }){
+                                        Text("edit")
+                                          
+                                    }
+                                    
+                                  
+                                }
+                                
+                                Text("Due:")
+                                    .font(.title3)
+                                    .bold()
+                                
+                                Text(goalVM.formatDate(goal.dateDue ?? Date()))
+                                    .font(.title3)
+                                    .bold()
+                                    
+                                 
+                            }
+                            .padding(.leading)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                            
+                        
+                      
                         
                         LazyVStack (spacing: 5){
                             
@@ -95,21 +240,21 @@ struct GoalView: View {
                                             
                                             
                                             if task.timer != nil && !task.isComplete {
-                                                TaskRectangularNavLinkSmall(taskVM: taskVM, timerVM: timerVM, task: task, selectedSort: $selectedSort, proxy: proxy)
+                                                TaskRectangularNavLinkSmall(goalVM: goalVM,taskVM: taskVM, timerVM: timerVM, task: task, selectedSort: $selectedSort, proxy: proxy)
                                             } else if task.quantityval != nil && !task.isComplete {
-                                                QValTaskRectangularNavLinkSmall(taskVM: taskVM, timerVM: timerVM, task: task, selectedTask: $selectedTaskForSheet, isShowingUpdateSheet: $isShowingSheet,selectedSort: $selectedSort, proxy: proxy)
+                                                QValTaskRectangularNavLinkSmall(goalVM: goalVM,taskVM: taskVM, timerVM: timerVM, task: task, selectedTask: $selectedTaskForSheet, isShowingUpdateSheet: $isShowingSheet,selectedSort: $selectedSort, proxy: proxy)
                                             } else if !task.isComplete {
-                                                TaskRectangularNavLinkSimpleSmall(taskVM: taskVM, timerVM: timerVM, task: task)
+                                                TaskRectangularNavLinkSimpleSmall(goalVM: goalVM,taskVM: taskVM, timerVM: timerVM, task: task)
                                                 
                                             }
                                         } else {
                                             
                                             if task.timer != nil && !task.isComplete {
-                                                TaskRectangularNavLink(taskVM: taskVM, timerVM: timerVM, task: task, selectedSort: $selectedSort, proxy: proxy)
+                                                TaskRectangularNavLink(goalVM: goalVM,taskVM: taskVM, timerVM: timerVM, task: task, selectedSort: $selectedSort, proxy: proxy)
                                             } else if task.quantityval != nil && !task.isComplete {
-                                                QValTaskRectangularNavLink(taskVM: taskVM, timerVM: timerVM, task: task, selectedTask: $selectedTaskForSheet, isShowingUpdateSheet: $isShowingSheet,selectedSort: $selectedSort, proxy: proxy)
+                                                QValTaskRectangularNavLink(goalVM: goalVM,taskVM: taskVM, timerVM: timerVM, task: task, selectedTask: $selectedTaskForSheet, isShowingUpdateSheet: $isShowingSheet,selectedSort: $selectedSort, proxy: proxy)
                                             } else if !task.isComplete {
-                                                TaskRectangularNavLinkSimple(taskVM: taskVM, timerVM: timerVM, task: task)
+                                                TaskRectangularNavLinkSimple(goalVM: goalVM,taskVM: taskVM, timerVM: timerVM, task: task)
                                             }
                                         }
                                     }
@@ -123,7 +268,10 @@ struct GoalView: View {
                             
                             ForEach(displayedTasks, id: \.objectID) { task in
                                 if task.isComplete {
-                                    CompletedTaskNavLink(taskVM: taskVM, timerVM: timerVM, task: task)
+                                    HStack {
+                                        EditTaskView(goal: goal, task: task, isEditView: $isEditView, taskToDelete: $taskToDelete, showDeleteConfirmation: $showDeleteConfirmation, selectedSort: $selectedSort, taskVM: taskVM, timerVM: timerVM, goalVM: goalVM)
+                                        CompletedTaskNavLink(goalVM: goalVM,taskVM: taskVM, timerVM: timerVM, task: task)
+                                    }
                                 }
                             }
                             
@@ -192,22 +340,44 @@ struct GoalView: View {
                     }
                     .padding(.horizontal)
                     .padding(.vertical, 8)
-                    .background(Color.gray.opacity(0.15))
+                    .background(colorScheme == .dark ? .black.opacity(0.10) : .gray.opacity(0.15))
                     .sheet(item: $selectedTaskForSheet) { task in
-                        IncrementView(task: task, taskVM: taskVM)
+                        IncrementView(task: task, goal: goal, taskVM: taskVM, goalVM: goalVM, timerVM: timerVM)
                         
                     }
                 }
                 
             }
-            .background(Color.gray.opacity(0.15))
+            .background(colorScheme == .dark ? .black.opacity(0.10) : .gray.opacity(0.15))
             .onAppear {
-                taskVM.fetchTasks()
-                timerVM.updateAllRunningTaskTimers()
-                timerVM.setAllTimerVals()
-                timerVM.beginProgressUpdates(for: Date())
+                taskVM.fetchTasks(for: goal)
+                timerVM.updateAllRunningTaskTimers(goal: goal, goalTasks: displayedTasks)
+                timerVM.setAllTimerVals(goal: goal, goalTasks: displayedTasks)
+                timerVM.beginProgressUpdates(for: Date(), goalTasks: displayedTasks)
+                goalVM.GoalElapsedTime(goal: goal)
 //                timerVM.countDownTimer(task: taskVM.newTask, seconds: 10, minutes: 1, hours: 0)
 //                displayedTasks = taskVM.sortedTasksAll(allTasks: taskVM.savedTasks, option: selectedSort)
+            }
+            .onChange(of:  goal.estimatedTimeRemaining) {
+                
+                timerVM.setAllTimerVals(goal: goal, goalTasks: displayedTasks)
+                
+            }
+            .alert("Delete all tasks for this goal?  Tasks will be permanently deleted.", isPresented: $showDeleteForGoalConfirmation) {
+                
+                Button(action: {
+                    taskVM.deleteMultipleTasksInView(tasks: displayedTasks, goal: goal)
+                    isEditView = false 
+                    
+                }, label: {
+                    Text("Delete All Tasks")
+                        .foregroundColor(.red)
+                })
+                
+                Button("Cancel", role: .cancel) {
+                    showDeleteForGoalConfirmation = false
+                    isEditView = false
+                }
             }
 
 //            .toolbar {

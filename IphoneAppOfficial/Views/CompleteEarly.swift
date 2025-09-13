@@ -20,49 +20,87 @@ struct CompleteEarly: View {
         VStack {
             
             HStack {
-                Spacer()
-                Button {
-                    taskVM.completeTaskEarly(task: task)
-                    timerVM.updateCombinedTimers()
-                    dismiss()
-                } label: {
-                    Text("Complete Early")
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .contentShape(Rectangle())
-                }
-                .frame(width: 150,height: 40)
-                
-                .foregroundStyle(.white)
-                
-                .background(Color.blue)
-                .cornerRadius(15)
-                
-                .padding(.top)
-                
+                Text("Will adjust values so the current value is the completion goal.")
+                    .frame(width: 160)
+                    .padding(.leading)
+                    .fontDesign(.serif)
                 
                 Spacer()
                 
-                Button {
-                    taskVM.completeTask(task: task)
-                    timerVM.updateCombinedTimers()
-                    dismiss()
-                } label: {
-                    Text("Complete Task")
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .contentShape(Rectangle())
-                }
-                .frame(width: 150,height: 40)
-                
-                .foregroundStyle(.white)
-                
-                .background(Color.blue)
-                .cornerRadius(15)
-                
-                .padding(.top)
-                Spacer()
+                Text("Will increment the values and complete task as intended.")
+                    .frame(width: 160)
+                    .padding(.trailing)
+                    .fontDesign(.serif)
             }
             
-            
+            HStack {
+              
+                    
+                
+                    Button {
+                        if task.timer != nil {
+                            if task.timer?.timerManualToggled == true && task.timer?.isRunning == true  {
+                                
+                                timerVM.toggleTimerOff(task: task)
+                                task.timer?.continueFromRefresh = false
+                                timerVM.startUITimer(task: task)
+                            }
+                        }
+                        
+                        taskVM.completeTaskEarly(task: task)
+                        timerVM.updateCombinedTimers()
+                        dismiss()
+                    } label: {
+                        Text("Complete Early")
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .contentShape(Rectangle())
+                    }
+                    .frame(width: 150,height: 40)
+                    
+                    .foregroundStyle(.white)
+                    
+                    .background(Color.blue)
+                    .cornerRadius(15)
+                    .padding(.leading)
+                    .padding(.top)
+                    
+                
+                
+                
+                Spacer()
+                
+
+                    
+                    Button {
+                        if task.timer != nil {
+                            if task.timer?.timerManualToggled == true && task.timer?.isRunning == true  {
+                                
+                                timerVM.toggleTimerOff(task: task)
+                                task.timer?.continueFromRefresh = false
+                                timerVM.startUITimer(task: task)
+                            }
+                        }
+                        
+                        taskVM.completeTask(task: task)
+                        timerVM.updateCombinedTimers()
+                        dismiss()
+                    } label: {
+                        Text("Complete Task")
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .contentShape(Rectangle())
+                    }
+                    .frame(width: 150,height: 40)
+                    
+                    .foregroundStyle(.white)
+                    
+                    .background(Color.blue)
+                    .cornerRadius(15)
+                    .padding(.trailing)
+                    .padding(.top)
+                 
+                }
+                
+            }
             Button(action: {
                 dismiss()
                 
@@ -75,16 +113,17 @@ struct CompleteEarly: View {
             
             .frame(width: 150,height: 40)
             
-            .foregroundStyle(.white)
+            .foregroundStyle(.black)
             
             .background(Color.gray.opacity(0.3))
             .cornerRadius(15)
             
             .padding(.top, 20)
+            
        
             
         }
-    }
+    
 }
 
 //

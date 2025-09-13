@@ -9,6 +9,7 @@ import SwiftUI
 import CoreData
 
 struct TimerSelectView: View {
+    @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) private var dismiss
     
     @ObservedObject var taskVM: TaskViewModel
@@ -32,12 +33,26 @@ struct TimerSelectView: View {
         
       
             VStack {
+                if addTimer == false && addQuantityVal == false {
+                    HStack {
+                        Spacer()
+                        Text("Add a timer to your task and track your progress.")
+                            .frame(width: 130)
+                        
+                        Spacer()
+                        
+                        Text("Add a numeric value to task.  Increment until completion.")
+                            .frame(width: 130)
+                        Spacer()
+                    }
+                  
+                    
+                }
+                
                 HStack {
                     
                     
-                    if addTimer == false {
-                        Spacer()
-                    }
+                    
                     if addTimer == false && addQuantityVal == false {
                         
                         
@@ -45,35 +60,23 @@ struct TimerSelectView: View {
                             addTimer.toggle()
                             addQuantityVal = false
                         }, label: {
-                            if addTimer == true {
-                                Text("Cancel Timer")
-                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                    .contentShape(Rectangle())
-                            } else {
-                                Text("Add Timer")
-                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                    .contentShape(Rectangle())
-                            }
+                            
+                            
+                            Text("Add Timer")
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .contentShape(Rectangle())
+                            
                         })
-                        
                         .frame( width: 150,height: 40)
-                        
-                        .foregroundStyle(.black)
-                        
-                        .background(Color.gray.opacity(0.2))
+                        .foregroundStyle(.white)
+                        .background(Color.blue)
                         .cornerRadius(15)
-                        
                         .padding(.top)
-                    }
-                    if addTimer == false && addQuantityVal == false {
+                        
+                        
                         Text("or")
                             .bold()
                             .padding(.top)
-                    }
-                    
-                    
-                    
-                    if addTimer == false && addQuantityVal == false {
                         
                         
                         Button(action: {
@@ -85,231 +88,74 @@ struct TimerSelectView: View {
                                 .contentShape(Rectangle())
                         })
                         .frame(width: 170,height: 40)
-                        
-                        .foregroundStyle(.black)
-                        
-                        .background(Color.gray.opacity(0.2))
+                        .foregroundStyle(.white)
+                        .background(Color.blue)
                         .cornerRadius(15)
                         
                         .padding(.top)
-                        Spacer()
+                        
+                        
                         
                     }
                 }
                 
-                
                 if addTimer == true {
-                    Text("Select timer value for \(task.title ?? "Task")")
-                        .font(.title2)
-                        .bold()
-                    
-                    HStack {
-                        
-                        VStack {
-                            Picker("Hours", selection: $hours, content: {
-                                Text("Hours")
-                                ForEach(0..<24, content: {
-                                    number in
-                                    Text("\(number)").tag(Double(number))
-                                })
-                            }).pickerStyle(WheelPickerStyle())
-                        }
-                        
-                        VStack {
-                            Picker("Minutes", selection: $minutes, content: {
-                                Text("Minutes")
-                                ForEach(0..<60, content: {
-                                    number in
-                                    Text("\(number)").tag(Double(number))
-                                })
-                            }).pickerStyle(WheelPickerStyle())
-                        }
-                        
-                        VStack {
-                            
-                            Picker("Seconds", selection: $seconds, content: {
-                                Text("Seconds")
-                                ForEach(0..<60, content: {
-                                    number in
-                                    Text("\(number)").tag(Double(number))
-                                })
-                            }).pickerStyle(WheelPickerStyle())
-                        }
+                    if let goal = goal {
+                        AddTimerView(taskVM: taskVM, goalVM: goalVM, timerVM: timerVM, goal: goal, task: task)
+                    } else {
+                        AddTimerView(taskVM: taskVM, goalVM: goalVM, timerVM: timerVM, task: task)
                     }
-                    
-                    Button(action: {
-                        
-                        if (task.repeating == false) {
-                            taskVM.addTimerToTask(task: task)
-                            timerVM.countDownTimer(task: task, seconds: seconds, minutes: minutes, hours: hours)
-                            if let goal = goal {
-                                goalVM.GoalElapsedTime(goal: goal)
-                            }
-                                dismiss()
-                            
-                        } else {
-                            taskVM.addMultipleTimers(task: task)
-                            taskVM.addMultipleCountdownTimers(task: task, seconds: seconds, minutes: minutes, hours: hours)
-                            if let goal = goal {
-                                goalVM.GoalElapsedTime(goal: goal)
-                            }
-                                dismiss()
-                            
-                        }
-                    }, label: {
-                        
-                        Text("SUBMIT")
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .contentShape(Rectangle())
-                    })
-                    
-                    .frame(width: 350,height: 40)
-                    .foregroundStyle(.white)
-                    .background(Color(.blue))
-                    .cornerRadius(15)
-                    .padding(.top, 40)
-                    .padding(.leading, 9)
                 }
                 
                 if addQuantityVal == true {
-                    VStack {
-                        Text("Select quantity value for ")
-                            .font(.title2)
-                            .bold()
-                        Text("\(task.title ?? "Task")")
-                            .font(.title2)
-                            .bold()
-                            
-                        
-                        TextField("Enter Quantity Value", text: $inputNumberText)
-                            .font(.title2)
-                            .padding(.leading, 10)
-                            .keyboardType(.decimalPad)
-                            .frame(height: 40)
-                        
-                        VStack {
-                            Text("Select time per quantity for ")
-                                .font(.title2)
-                                .bold()
-                            Text("\(task.title ?? "Task")")
-                                .font(.title2)
-                                .bold()
-                        }
-                                .padding(.top, 20)
-                                
-                      
-                        
-                        HStack {
-                            
-                            VStack {
-                                Picker("Hours", selection: $hours, content: {
-                                    Text("Hours")
-                                    ForEach(0..<24, content: {
-                                        number in
-                                        Text("\(number)").tag(Double(number))
-                                    })
-                                }).pickerStyle(WheelPickerStyle())
-                            }
-                            
-                            VStack {
-                                Picker("Minutes", selection: $minutes, content: {
-                                    Text("Minutes")
-                                    ForEach(0..<60, content: {
-                                        number in
-                                        Text("\(number)").tag(Double(number))
-                                    })
-                                }).pickerStyle(WheelPickerStyle())
-                            }
-                            
-                            VStack {
-                                
-                                Picker("Seconds", selection: $seconds, content: {
-                                    Text("Seconds")
-                                    ForEach(0..<60, content: {
-                                        number in
-                                        Text("\(number)").tag(Double(number))
-                                    })
-                                }).pickerStyle(WheelPickerStyle())
-                            }
-                        }
-                        
-                        
-                        Button(action: {
-                            
-                            let newNumber = Double(inputNumberText) ?? 0
-                            if task.repeating == false {
-                                taskVM.addQuantityVal(task: task, qVal: newNumber)
-                                taskVM.timeEstimatePerQuantity(task: task, hours: hours, minutes: minutes, seconds: seconds)
-                                if let goal = goal {
-                                    goalVM.GoalElapsedTime(goal: goal)
-                                }
-                               
-                                    dismiss()
-                                
-                            } else {
-                                taskVM.addMultipleQuantityVals(task: task, qVal: newNumber)
-                                taskVM.timeEstimatePerQuantityMultiple(task: task, hours: hours, minutes: minutes, seconds: seconds)
-                                if let goal = goal {
-                                    goalVM.GoalElapsedTime(goal: goal)
-                                }
-                               
-                                    dismiss()
-                                
-                            }
-                        }, label: {
-                            
-                            Text("SUBMIT")
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                .contentShape(Rectangle())
-                        })
-                        
-                        .frame(width: 350,height: 40)
-                        .foregroundStyle(.white)
-                        .background(Color(.blue))
-                        .cornerRadius(15)
-                        .padding(.top, 40)
-                        .padding(.leading, 9)
+                    if let goal = goal {
+                        AddQuantityView(taskVM: taskVM, goalVM: goalVM, timerVM: timerVM, goal: goal, task: task)
+                    } else {
+                        AddQuantityView(taskVM: taskVM, goalVM: goalVM, timerVM: timerVM, task: task)
                     }
-                    .frame(minHeight: 500, alignment: .top)
-                    
-                    
-                    
-                    
                 }
+            
                 
                 
+                if addTimer == false && addQuantityVal == false {
+                    
+                    Text("Basic task with no additional features.")
+                        .frame(width: 160)
+                        .padding(.top)
+                    
                 HStack {
+                    
                     Spacer()
                     
-                    if addTimer == false && addQuantityVal == false {
                         Button(action: {
                             if goal != nil {
-                                showGoalView.toggle()
+//                                showGoalView.toggle()
+                                
+                                dismiss()
+                                
                             } else {
                                 dismiss()
                             }
-                            
-                            
-                            
+  
                         }, label: {
                             
-                            Text("CANCEL")
+                            Text("Neither")
                                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .foregroundColor(colorScheme == .dark ? .white : .black)
                                 .contentShape(Rectangle())
                         })
-                        
                         .frame(width: 150,height: 40)
-                        
                         .foregroundStyle(.black)
-                        
-                        .background(Color.gray.opacity(0.2))
+                        .background(colorScheme == .dark ? Color.gray.opacity(0.4) : Color.gray.opacity(0.2))
                         .cornerRadius(15)
-                        
                         .padding(.top)
+
                         Spacer()
                     }
                     
                 }
+              
+                
                 HStack {
                     Spacer()
                     
@@ -320,28 +166,26 @@ struct TimerSelectView: View {
                             } else {
                                 addQuantityVal.toggle()
                             }
-                            
-                            
                         }, label: {
                             
                             Text("CANCEL")
                                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .foregroundColor(colorScheme == .dark ? .white : .black)
                                 .contentShape(Rectangle())
                         })
-                        
                         .frame(width: 150,height: 40)
-                        
                         .foregroundStyle(.black)
-                        
-                        .background(Color.gray.opacity(0.2))
+                        .background(colorScheme == .dark ? Color.gray.opacity(0.4) : Color.gray.opacity(0.2))
                         .cornerRadius(15)
-                        
                         .padding(.top)
                         Spacer()
                     }
                     
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(colorScheme == .dark ? .gray.opacity(0.15) : .white)
+            .navigationBarHidden(true)
             .navigationDestination(isPresented: $showGoalView) {
                 if let goal = goal {
                     GoalView(taskVM: taskVM, timerVM: timerVM, goalVM: goalVM, goal: goal)
@@ -361,3 +205,5 @@ struct TimerSelectView: View {
 //    
 //    return TimerSelectView(,goal: sampleGoal, task: sampleTask)
 }
+
+

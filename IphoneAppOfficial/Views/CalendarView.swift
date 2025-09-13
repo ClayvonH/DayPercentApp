@@ -265,11 +265,13 @@
 ////}
 //
 struct MonthYearPickerView: View {
+    
+    @Environment(\.colorScheme) var colorScheme
     @Binding var selectedMonth: Int
     @Binding var selectedYear: Int
 
     let months = Calendar.current.monthSymbols
-    let years = Array(2000...2100)
+    let years = Array(2000...2040)
 
     var body: some View {
         HStack {
@@ -281,11 +283,12 @@ struct MonthYearPickerView: View {
             .pickerStyle(WheelPickerStyle())
 
             Picker("Year", selection: $selectedYear) {
-                ForEach(years, id: \..self) { year in
-                    Text("\(year)").tag(year)
-                }
-            }
-            .pickerStyle(WheelPickerStyle())
+                           ForEach(years, id: \.self) { year in
+                               Text(String(year)) // <- ensures no commas
+                                   .tag(year)
+                           }
+                       }
+                       .pickerStyle(WheelPickerStyle())
         }
         .frame(height: 150)
     }
@@ -300,6 +303,7 @@ struct MonthYearPickerView: View {
 import SwiftUI
 
 struct CalendarView: View {
+    @Environment(\.colorScheme) var colorScheme
     @ObservedObject var taskVM: TaskViewModel
     @ObservedObject var timerVM: TimerViewModel
     @ObservedObject var goalVM: GoalViewModel
@@ -320,6 +324,8 @@ struct CalendarView: View {
         }
         .padding(.top, 30)
         .frame(maxHeight: .infinity, alignment: .top)
+        .background(colorScheme == .dark ? .gray.opacity(0.15) : .white)
+        
     }
 
     private var monthNavigation: some View {
@@ -363,8 +369,13 @@ struct CalendarView: View {
                         .fontWeight(.bold)
 //                        .foregroundColor(Color.black)
                         .foregroundColor(
-                               calendar.isDateInToday(date) ? Color.blue : Color.black // blue circle if today
-                           )
+                                               calendar.isDateInToday(date)
+                                                   ? .blue   // today
+                                               : (colorScheme == .dark ? .white.opacity(0.8) : .black) // dark/light
+                                           )
+                        .bold(
+                            calendar.isDateInToday(date) ? true : false
+                            )
                         .frame(width: 40, height: 80)
                         .clipShape(Circle())
                 }

@@ -64,81 +64,250 @@ class TimerViewModel: ObservableObject {
             }
     }
     
-    func setAllTimerVals() {
+    func startSharedUITimerDate(date: Date, tasks: [Task]) {
+        sharedUITimer?.cancel()  // Stop existing one if any
+
+        sharedUITimer = Timer.publish(every: 0.5, on: .main, in: .common)
+            .autoconnect()
+            .sink { [weak self] _ in
+                self?.updateAllRunningTaskTimers(date: date, tasks: tasks)
+            }
+    }
+    
+    
+    func setAllTimerVals(date: Date? = nil, tasks: [Task]? = nil, goal: Goal? = nil, goalTasks: [Task]? = nil) {
         
-        for task in self.taskViewModel.savedTasks {
-            guard let timerData = task.timer, !timerData.isRunning else { continue }
+        if goal !=  nil {
+            if let tasks = goalTasks {
+                for task in tasks {
+                    guard let timerData = task.timer, !timerData.isRunning else { continue }
+                    
+                    self.countDownViewElapsed[task.objectID] = timerData.elapsedTime
+                    self.countDownView[task.objectID] = timerData.countdownTimer
+                    self.percentageValues[task.objectID] = timerData.percentCompletion
+                    
+                    
+                }
+                
+            }
+        } else if (date !=  nil) {
+            if let tasks = tasks {
+                for task in tasks {
+                    guard let timerData = task.timer, !timerData.isRunning else { continue }
+                    
+                    self.countDownViewElapsed[task.objectID] = timerData.elapsedTime
+                    self.countDownView[task.objectID] = timerData.countdownTimer
+                    self.percentageValues[task.objectID] = timerData.percentCompletion
+                    
+                    
+                }
+                
+            }
+        } else {
             
-            self.countDownViewElapsed[task.objectID] = timerData.elapsedTime
-            self.countDownView[task.objectID] = timerData.countdownTimer
-            self.percentageValues[task.objectID] = timerData.percentCompletion
-            
-            
+            for task in self.taskViewModel.savedTasks {
+                guard let timerData = task.timer, !timerData.isRunning else { continue }
+                
+                self.countDownViewElapsed[task.objectID] = timerData.elapsedTime
+                self.countDownView[task.objectID] = timerData.countdownTimer
+                self.percentageValues[task.objectID] = timerData.percentCompletion
+                
+                
+            }
         }
     }
 
     
 
-    func updateAllRunningTaskTimers() {
+    func updateAllRunningTaskTimers(date: Date? = nil, tasks: [Task]? = nil, goal: Goal? = nil, goalTasks: [Task]? = nil) {
         
-        let currentTime = Date()
+        if goal != nil {
+            let currentTime = Date()
+            if let goalTasks = goalTasks {
+                for task in goalTasks {
+                    guard let timerData = task.timer, timerData.isRunning else { continue }
 
-        for task in self.taskViewModel.savedTasks {
-            guard let timerData = task.timer, timerData.isRunning else { continue }
+                    let newElapsedTime = currentTime.timeIntervalSince(timerData.startDate ?? currentTime)
+                    let newCDTime = max(0, timerData.cdTimerEndDate?.timeIntervalSince(currentTime) ?? 0)
+                    let uiPvals = max(0, min((newElapsedTime / timerData.countdownNum) * 100, 100))
 
-            let newElapsedTime = currentTime.timeIntervalSince(timerData.startDate ?? currentTime)
-            let newCDTime = max(0, timerData.cdTimerEndDate?.timeIntervalSince(currentTime) ?? 0)
-            let uiPvals = max(0, min((newElapsedTime / timerData.countdownNum) * 100, 100))
+                    timerData.elapsedTime = newElapsedTime
+                    timerData.countdownTimer = newCDTime
+                    timerData.percentCompletion = uiPvals
+                    
+                    self.countDownViewElapsed[task.objectID] = newElapsedTime
+                    self.countDownView[task.objectID] = newCDTime
+                    self.percentageValues[task.objectID] = uiPvals
+                    
+                    
 
-            timerData.elapsedTime = newElapsedTime
-            timerData.countdownTimer = newCDTime
-            timerData.percentCompletion = uiPvals
-            
-            self.countDownViewElapsed[task.objectID] = newElapsedTime
-            self.countDownView[task.objectID] = newCDTime
-            self.percentageValues[task.objectID] = uiPvals
-            
-            
+                    if let goal = task.goal {
+                        goalViewModel.GoalElapsedTimeUIUpdateOnly(goal: goal)
+                    }
 
-            if let goal = task.goal {
-                goalViewModel.GoalElapsedTimeUIUpdateOnly(goal: goal)
-            }
+        //            self.countDownViewElapsed[task.objectID] = newElapsedTime
+        //            self.countDownView[task.objectID] = newCDTime
+        //            self.percentageValues[task.objectID] = uiPvals
 
-//            self.countDownViewElapsed[task.objectID] = newElapsedTime
-//            self.countDownView[task.objectID] = newCDTime
-//            self.percentageValues[task.objectID] = uiPvals
+                    if newCDTime <= 0 {
+                        stopTimer(task)
+                        timerData.timerComplete = true
+                        task.isComplete = true
 
-            if newCDTime <= 0 {
-                stopTimer(task)
-                timerData.timerComplete = true
-                task.isComplete = true
+                        // Schedule a local notification
+//                        let content = UNMutableNotificationContent()
+//                        content.title = "Task Complete"
+//                        content.body = "\(task.title ?? "A task") is now complete!"
+//                        content.sound = .default
+//
+//                        let request = UNNotificationRequest(
+//                            identifier: task.objectID.uriRepresentation().absoluteString,
+//                            content: content,
+//                            trigger: nil // Deliver immediately
+//                        )
+//
+//                        UNUserNotificationCenter.current().add(request) { error in
+//                            if let error = error {
+//                                print("Failed to schedule notification: \(error.localizedDescription)")
+//                            }
+//                        }
+                        checkGoalComplete(task: task)
+                    }
 
-                // Schedule a local notification
-                let content = UNMutableNotificationContent()
-                content.title = "Task Complete"
-                content.body = "\(task.title ?? "A task") is now complete!"
-                content.sound = .default
 
-                let request = UNNotificationRequest(
-                    identifier: task.objectID.uriRepresentation().absoluteString,
-                    content: content,
-                    trigger: nil // Deliver immediately
-                )
-
-                UNUserNotificationCenter.current().add(request) { error in
-                    if let error = error {
-                        print("Failed to schedule notification: \(error.localizedDescription)")
+                    if !timerData.isRunning {
+                        stopTimer(task)
                     }
                 }
             }
-
-
-            if !timerData.isRunning {
-                stopTimer(task)
-            }
+            
         }
+        
+        if date != nil {
+            let currentTime = Date()
+            
+            if let tasks = tasks {
+                for task in tasks {
+                    guard let timerData = task.timer, timerData.isRunning else { continue }
 
-        self.updateCombinedTimers()
+                    let newElapsedTime = currentTime.timeIntervalSince(timerData.startDate ?? currentTime)
+                    let newCDTime = max(0, timerData.cdTimerEndDate?.timeIntervalSince(currentTime) ?? 0)
+                    let uiPvals = max(0, min((newElapsedTime / timerData.countdownNum) * 100, 100))
+
+                    timerData.elapsedTime = newElapsedTime
+                    timerData.countdownTimer = newCDTime
+                    timerData.percentCompletion = uiPvals
+                    
+                    self.countDownViewElapsed[task.objectID] = newElapsedTime
+                    self.countDownView[task.objectID] = newCDTime
+                    self.percentageValues[task.objectID] = uiPvals
+                    
+                    
+
+                    if let goal = task.goal {
+                        goalViewModel.GoalElapsedTimeUIUpdateOnly(goal: goal)
+                    }
+
+        //            self.countDownViewElapsed[task.objectID] = newElapsedTime
+        //            self.countDownView[task.objectID] = newCDTime
+        //            self.percentageValues[task.objectID] = uiPvals
+
+                    if newCDTime <= 0 {
+                        stopTimer(task)
+                        timerData.timerComplete = true
+                        task.isComplete = true
+
+                        // Schedule a local notification
+//                        let content = UNMutableNotificationContent()
+//                        content.title = "Task Complete"
+//                        content.body = "\(task.title ?? "A task") is now complete!"
+//                        content.sound = .default
+//
+//                        let request = UNNotificationRequest(
+//                            identifier: task.objectID.uriRepresentation().absoluteString,
+//                            content: content,
+//                            trigger: nil // Deliver immediately
+//                        )
+//
+//                        UNUserNotificationCenter.current().add(request) { error in
+//                            if let error = error {
+//                                print("Failed to schedule notification: \(error.localizedDescription)")
+//                            }
+//                        }
+                        
+                        checkGoalComplete(task: task)
+                    }
+
+
+                    if !timerData.isRunning {
+                        stopTimer(task)
+                    }
+                }
+            }
+            self.updateCombinedTimers(date: date, tasks: tasks)
+           
+        } else {
+            
+            let currentTime = Date()
+            
+            for task in self.taskViewModel.savedTasks {
+                guard let timerData = task.timer, timerData.isRunning else { continue }
+                
+                let newElapsedTime = currentTime.timeIntervalSince(timerData.startDate ?? currentTime)
+                let newCDTime = max(0, timerData.cdTimerEndDate?.timeIntervalSince(currentTime) ?? 0)
+                let uiPvals = max(0, min((newElapsedTime / timerData.countdownNum) * 100, 100))
+                
+                timerData.elapsedTime = newElapsedTime
+                timerData.countdownTimer = newCDTime
+                timerData.percentCompletion = uiPvals
+                
+                self.countDownViewElapsed[task.objectID] = newElapsedTime
+                self.countDownView[task.objectID] = newCDTime
+                self.percentageValues[task.objectID] = uiPvals
+                
+                
+                
+                if let goal = task.goal {
+                    goalViewModel.GoalElapsedTimeUIUpdateOnly(goal: goal)
+                }
+                
+                //            self.countDownViewElapsed[task.objectID] = newElapsedTime
+                //            self.countDownView[task.objectID] = newCDTime
+                //            self.percentageValues[task.objectID] = uiPvals
+                
+                if newCDTime <= 0 {
+                    stopTimer(task)
+                    timerData.timerComplete = true
+                    task.isComplete = true
+                    
+                    // Schedule a local notification
+//                    let content = UNMutableNotificationContent()
+//                    content.title = "Task Complete"
+//                    content.body = "\(task.title ?? "A task") is now complete!"
+//                    content.sound = .default
+//                    
+//                    let request = UNNotificationRequest(
+//                        identifier: task.objectID.uriRepresentation().absoluteString,
+//                        content: content,
+//                        trigger: nil // Deliver immediately
+//                    )
+//                    
+//                    UNUserNotificationCenter.current().add(request) { error in
+//                        if let error = error {
+//                            print("Failed to schedule notification: \(error.localizedDescription)")
+//                        }
+//                    }
+                    checkGoalComplete(task: task)
+                }
+                
+                
+                if !timerData.isRunning {
+                    stopTimer(task)
+                }
+            }
+            
+            self.updateCombinedTimers()
+        }
     }
     
     func ElapsedTimeForTasks(allTasks: [Task]) -> (combinedElapsed: Double, overAllTime: Double, percentComplete: Double, estimatedTimeRemaining: Double) {
@@ -171,7 +340,7 @@ class TimerViewModel: ObservableObject {
         return (totalElapsed, overAllTime, percent, remaining)
     }
     
-    func beginProgressUpdates(for date: Date) {
+    func beginProgressUpdates(for date: Date, tasks: [Task]? = nil, goalTasks: [Task]? = nil) {
         progressUpdateTimer?.cancel()
 
         progressUpdateTimer = Timer.publish(every: 0.5, on: .main, in: .common)
@@ -180,14 +349,40 @@ class TimerViewModel: ObservableObject {
                 guard let self = self else { return }
 
                 DispatchQueue.global(qos: .userInitiated).async {
-                    let result = self.ElapsedTimeForTasks(allTasks: self.taskViewModel.savedTasks)
-
-                    DispatchQueue.main.async {
-                        self.combinedElapsedProgress = result.combinedElapsed
-                        self.totalTaskTime = result.overAllTime
-                        self.taskProgressPercent = result.percentComplete
-                        self.taskTimeRemaining = result.estimatedTimeRemaining
-                        self.updateAllRunningTaskTimers()
+                    
+                    if let tasks = goalTasks {
+                        let result = self.ElapsedTimeForTasks(allTasks: tasks)
+                        
+                        DispatchQueue.main.async {
+                            self.combinedElapsedProgress = result.combinedElapsed
+                            self.totalTaskTime = result.overAllTime
+                            self.taskProgressPercent = result.percentComplete
+                            self.taskTimeRemaining = result.estimatedTimeRemaining
+                            self.updateAllRunningTaskTimers(date: date, tasks: tasks)
+                        }
+                        
+                    }
+                    if let tasks = tasks {
+                        let result = self.ElapsedTimeForTasks(allTasks: tasks)
+                        
+                        DispatchQueue.main.async {
+                            self.combinedElapsedProgress = result.combinedElapsed
+                            self.totalTaskTime = result.overAllTime
+                            self.taskProgressPercent = result.percentComplete
+                            self.taskTimeRemaining = result.estimatedTimeRemaining
+                            self.updateAllRunningTaskTimers(date: date, tasks: tasks)
+                        }
+                        
+                    } else {
+                        let result = self.ElapsedTimeForTasks(allTasks: self.taskViewModel.savedTasks)
+                        
+                        DispatchQueue.main.async {
+                            self.combinedElapsedProgress = result.combinedElapsed
+                            self.totalTaskTime = result.overAllTime
+                            self.taskProgressPercent = result.percentComplete
+                            self.taskTimeRemaining = result.estimatedTimeRemaining
+                            self.updateAllRunningTaskTimers()
+                        }
                     }
                 }
             }
@@ -233,26 +428,52 @@ class TimerViewModel: ObservableObject {
     
     
     
-    func updateCombinedTimers() {
-        var totalElapsed: TimeInterval = 0
-        var totalCountdown: TimeInterval = 0
+    func updateCombinedTimers(date: Date? = nil, tasks: [Task]? = nil) {
         
-        for task in taskViewModel.savedTasks {
-            guard let timer = task.timer,
-                  timer.isRunning,
-                  let elapsed = countDownViewElapsed[task.objectID],
-                  let countdown = countdownNums[task.objectID] else {
-                continue
+        if date != nil {
+            if let tasks = tasks {
+                
+                
+                var totalElapsed: TimeInterval = 0
+                var totalCountdown: TimeInterval = 0
+                
+                for task in tasks {
+                    guard let timer = task.timer,
+                          timer.isRunning,
+                          let elapsed = countDownViewElapsed[task.objectID],
+                          let countdown = countdownNums[task.objectID] else {
+                        continue
+                    }
+
+                    totalElapsed += elapsed
+                    totalCountdown += countdown
+                }
+
+                dailyTasksTimeRemaining = max(0, totalCountdown - totalElapsed)
+                dailyTasksPercentComplete = totalCountdown > 0 ? (totalElapsed / totalCountdown) * 100 : 0
             }
-
-            totalElapsed += elapsed
-            totalCountdown += countdown
+            
+        } else {
+            
+            var totalElapsed: TimeInterval = 0
+            var totalCountdown: TimeInterval = 0
+            
+            for task in taskViewModel.savedTasks {
+                guard let timer = task.timer,
+                      timer.isRunning,
+                      let elapsed = countDownViewElapsed[task.objectID],
+                      let countdown = countdownNums[task.objectID] else {
+                    continue
+                }
+                
+                totalElapsed += elapsed
+                totalCountdown += countdown
+            }
+            
+            dailyTasksTimeRemaining = max(0, totalCountdown - totalElapsed)
+            dailyTasksPercentComplete = totalCountdown > 0 ? (totalElapsed / totalCountdown) * 100 : 0
+            
         }
-
-        dailyTasksTimeRemaining = max(0, totalCountdown - totalElapsed)
-        dailyTasksPercentComplete = totalCountdown > 0 ? (totalElapsed / totalCountdown) * 100 : 0
-        
-        
     }
     
     func estimatedTimeRemaining(for date: Date) -> Double {
@@ -307,6 +528,7 @@ class TimerViewModel: ObservableObject {
                 
 
                 DispatchQueue.main.async {
+                   
                     timerData.elapsedTime = newElapsedTime
                     self.countDownViewElapsed[task.objectID] = newElapsedTime
                     self.countDownView[task.objectID] = newCDTime
@@ -317,6 +539,9 @@ class TimerViewModel: ObservableObject {
                         timerData.timerComplete = true
                         print("Timer complete for \(task.title ?? "task")")
                         timer.invalidate()
+                        if let task = timerData.task {
+                            self.checkGoalComplete(task: task)
+                        }
                     }
 
                     if timerData.isRunning == false {
@@ -432,7 +657,12 @@ class TimerViewModel: ObservableObject {
             CoreDataManager.shared.saveContext()
                 print("Starting timer timer from scratch for \(task.title ?? "task")")
             }
-        
+        if task.timer?.isRunning == true, let endDate = task.timer?.cdTimerEndDate {
+            let timeRemaining = endDate.timeIntervalSinceNow
+            if timeRemaining > 0 {
+                scheduleTaskCompletionNotification(for: task)
+            }
+        }
     }
     
     func stopTimer(_ task: Task) {
@@ -473,6 +703,9 @@ class TimerViewModel: ObservableObject {
         if let goal = task.goal {
             goalViewModel.GoalElapsedTime(goal: goal)
         }
+        let identifier = task.objectID.uriRepresentation().absoluteString
+           UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [identifier])
+
         CoreDataManager.shared.saveContext()
     }
     
@@ -494,7 +727,7 @@ class TimerViewModel: ObservableObject {
         task.timer?.countdownTimer = -(currentTime.timeIntervalSince(task.timer?.cdTimerEndDate ?? Date()))
         
         if let elapsedT = task.timer?.elapsedTime, let cdNum = task.timer?.countdownNum {
-            if elapsedT > cdNum {
+            if elapsedT >= cdNum {
                 print("Task complete!")
                 task.timer?.elapsedTime = cdNum
                 
@@ -511,6 +744,21 @@ class TimerViewModel: ObservableObject {
         print(" %\(task.timer?.percentCompletion ?? 0)")
         print("elapsed \(task.timer?.elapsedTime ?? 0)")
       
+        if Int(newElapsedTime) < Int(task.timer?.countdownNum ?? 0) {
+            task.timer?.timerComplete = false
+            task.isComplete = false
+        } else {
+            let roundedE = newElapsedTime.rounded(.down)
+            let roundedT = task.timer?.countdownNum.rounded(.down)
+            
+            task.timer?.elapsedTime = roundedE
+            task.timer?.countdownNum = roundedT ?? 0
+            task.timer?.timerComplete = true
+            task.isComplete = true
+            task.timer?.percentCompletion = 100
+            print(task.timer?.elapsedTime ?? 0)
+            print("countdown number \(task.timer?.countdownNum ?? 0)")
+        }
         
 
         if let goal = task.goal {
@@ -536,7 +784,14 @@ class TimerViewModel: ObservableObject {
             task.timer?.percentCompletion = 0
             print("Invalid countdown or elapsed time. Setting completion to 0%.")
         }
+        if Double(task.timer?.percentCompletion ?? 0) < 100 {
+            task.timer?.timerComplete = false
+            task.isComplete = false
+        }
+        print("is task complete? \(task.isComplete)")
+       
         CoreDataManager.shared.saveContext()
+ 
     }
     
     func countDownTimer( task: Task, seconds: Double, minutes: Double, hours: Double) {
@@ -559,6 +814,67 @@ class TimerViewModel: ObservableObject {
     func toggleTimerOff (task: Task) {
         task.timer?.timerManualToggled = false
         CoreDataManager.shared.saveContext()
+    }
+    
+    func scheduleTaskCompletionNotification(for task: Task) {
+        guard let timerData = task.timer else { return }
+
+        let timeRemaining = timerData.cdTimerEndDate?.timeIntervalSinceNow ?? 0
+        guard timeRemaining > 0 else { return }
+
+        let content = UNMutableNotificationContent()
+        content.title = "Task Complete"
+        content.body = "\(task.title ?? "A task") is now complete!"
+        content.sound = .defaultCritical
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: timeRemaining, repeats: false)
+
+        let request = UNNotificationRequest(
+            identifier: task.objectID.uriRepresentation().absoluteString,
+            content: content,
+            trigger: trigger
+        )
+
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("Failed to schedule notification: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    func notifyGoalCompleted(_ goal: Goal) {
+            let content = UNMutableNotificationContent()
+            content.title = "Goal Complete 🎯"
+            content.body = "\(goal.title ?? "A goal") has been completed! Great work!"
+            content.sound = .default
+            
+            let request = UNNotificationRequest(
+                identifier: goal.objectID.uriRepresentation().absoluteString,
+                content: content,
+                trigger: nil
+            )
+            
+            UNUserNotificationCenter.current().add(request) { error in
+                if let error = error {
+                    print("Failed to schedule goal notification: \(error.localizedDescription)")
+                }
+            }
+        }
+    
+    func checkGoalComplete(task: Task) {
+        
+        if let goal = task.goal {
+              let tasks = goal.task as? Set<Task> ?? []
+              let allComplete = tasks.allSatisfy { $0.isComplete }
+              
+              if allComplete && !goal.isComplete {
+                  goal.isComplete = true
+                  goal.dateCompleted = Date()
+                  CoreDataManager.shared.saveContext()
+                  notifyGoalCompleted(goal)
+              }
+          }
+        
     }
     
 }

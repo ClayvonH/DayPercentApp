@@ -72,3 +72,12 @@ extension Date {
         Calendar.current.startOfDay(for: self)
     }
 }
+
+extension  Date {
+    
+    func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MM/dd/yy"
+        return formatter.string(from: date)
+    }
+}

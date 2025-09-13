@@ -48,7 +48,6 @@ struct DailyTaskProgressFooter: View {
                     } else if (date == nil) {
                         if timerVM.taskTimeRemaining > 0 {
                             
-                            
                             Text("Time Remaining: \(timerVM.taskTimeRemaining.asHoursMinutesSeconds())")
                                 .bold()
                                 .foregroundColor(colorScheme == .dark ? .white : .black)
@@ -85,6 +84,7 @@ struct DailyTaskProgressFooter: View {
                         }
                     } else if (date == nil){
                         if timerVM.totalTaskTime > 0 {
+                            
                             
                             
                             ProgressView(value: timerVM.combinedElapsedProgress, total: timerVM.totalTaskTime)
@@ -130,13 +130,15 @@ struct DailyTaskProgressFooter: View {
             .onChange(of: goal?.combinedElapsed) {
                 
                 
-                
                 }
             .onChange(of: displayedTasks) {
                 if let date = date {
                     timerVM.beginProgressUpdatesDate(date: date, tasks: displayedTasks)
                     //                    timerVM.
                     
+                }
+                if let goal = goal {
+                    goalVM.GoalElapsedTime(goal: goal)
                 }
                 
                 }

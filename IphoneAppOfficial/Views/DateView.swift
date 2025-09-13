@@ -10,11 +10,12 @@ import SwiftUI
 import CoreData
 
 struct DateView: View {
+    @Environment(\.colorScheme) var colorScheme
     @State var date: Date
     @ObservedObject var taskVM: TaskViewModel
     @ObservedObject var goalVM: GoalViewModel
     @ObservedObject var timerVM: TimerViewModel
-    @State private var isCompactView = true
+    @State private var isCompactView = false
     
     @State private var selectedTaskForSheet: Task? = nil
     @State private var isShowingSheet = false
@@ -23,6 +24,7 @@ struct DateView: View {
     @State private var showDeleteConfirmation = false
     @State private var showDeleteAllTasksConfirmation = false
     @State private var taskToDelete: Task? = nil
+    @State private var showDeleteForDayConfirmation = false
     
     
 
@@ -73,27 +75,50 @@ struct DateView: View {
        
         
             VStack {
-                Button(action: {taskVM.deleteAllTasks()}, label: {
-                    Text("delete all tasks")
-                })
+                if isEditView {
+                    Button(action: {
+                        showDeleteForDayConfirmation.toggle()
+                        
+                    }, label: {
+                        Text("delete all tasks")
+                    })
+                }
                 ScrollViewReader { proxy in
                     
                     
                     ScrollView (){
                         
                         HStack {
-                            Text("Tasks For \(formatDate(date))")
-                                .font(.largeTitle)
-                                .bold()
-                                .padding(.leading)
-                                .id("top")
+                            if goalVM.dateGoals.count == 0 {
+                                Text("Tasks For \(formatDate(date))")
+                                    .font(.largeTitle)
+                                    .bold()
+                                    .padding(.leading)
+                                    .id("top")
+                            } else {
+                                Text("Tasks: \(formatDate(date))")
+                                    .font(.title)
+                                    .bold()
+                                    .padding(.leading)
+                                    .id("top")
+                            }
                             
+                            if goalVM.dateGoals.count > 0 {
+                                NavigationLink(destination: GoalsDueView(date: date, taskVM: taskVM, timerVM: timerVM, goalVM: goalVM)) {
+                                    Text("Goals Due!")
+                                        .bold()
+                                        .foregroundColor(.red)
+                                        .padding(.top, 20)
+                                        .padding(.leading)
+                                }
+                            }
                             
                             Spacer()
                             
                             TaskSortMenu(selectedSort: $selectedSort)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
+                        
                         
                         
                         
@@ -114,23 +139,23 @@ struct DateView: View {
                                             
                                             
                                             if task.timer != nil && !task.isComplete {
-                                                TaskRectangularNavLinkSmall(taskVM: taskVM, timerVM: timerVM, task: task, selectedSort: $selectedSort, proxy: proxy)
+                                                TaskRectangularNavLinkSmall(goalVM: goalVM,taskVM: taskVM, timerVM: timerVM, task: task, selectedSort: $selectedSort, proxy: proxy)
                                                   
                                                 
                                             } else if task.quantityval != nil && !task.isComplete {
-                                                QValTaskRectangularNavLinkSmall(taskVM: taskVM, timerVM: timerVM, task: task, selectedTask: $selectedTaskForSheet, isShowingUpdateSheet: $isShowingSheet,selectedSort: $selectedSort, proxy: proxy)
+                                                QValTaskRectangularNavLinkSmall(goalVM: goalVM,taskVM: taskVM, timerVM: timerVM, task: task, selectedTask: $selectedTaskForSheet, isShowingUpdateSheet: $isShowingSheet,selectedSort: $selectedSort, proxy: proxy)
                                             } else if !task.isComplete {
-                                                TaskRectangularNavLinkSimpleSmall(taskVM: taskVM, timerVM: timerVM, task: task)
+                                                TaskRectangularNavLinkSimpleSmall(goalVM: goalVM,taskVM: taskVM, timerVM: timerVM, task: task)
                                                 
                                             }
                                         } else {
                                             
                                             if task.timer != nil && !task.isComplete {
-                                                TaskRectangularNavLink(taskVM: taskVM, timerVM: timerVM, task: task, selectedSort: $selectedSort, proxy: proxy)
+                                                TaskRectangularNavLink(goalVM: goalVM,taskVM: taskVM, timerVM: timerVM, task: task, selectedSort: $selectedSort, proxy: proxy)
                                             } else if task.quantityval != nil && !task.isComplete {
-                                                QValTaskRectangularNavLink(taskVM: taskVM, timerVM: timerVM, task: task, selectedTask: $selectedTaskForSheet, isShowingUpdateSheet: $isShowingSheet,selectedSort: $selectedSort, proxy: proxy)
+                                                QValTaskRectangularNavLink(goalVM: goalVM,taskVM: taskVM, timerVM: timerVM, task: task, selectedTask: $selectedTaskForSheet, isShowingUpdateSheet: $isShowingSheet,selectedSort: $selectedSort, proxy: proxy)
                                             } else if !task.isComplete {
-                                                TaskRectangularNavLinkSimple(taskVM: taskVM, timerVM: timerVM, task: task)
+                                                TaskRectangularNavLinkSimple(goalVM: goalVM,taskVM: taskVM, timerVM: timerVM, task: task)
                                             }
                                         }
                                     }
@@ -144,7 +169,10 @@ struct DateView: View {
                             
                             ForEach(displayedTasks, id: \.objectID) { task in
                                 if task.isComplete {
-                                    CompletedTaskNavLink(taskVM: taskVM, timerVM: timerVM, task: task)
+                                    HStack {
+                                        EditTaskView(task: task, isEditView: $isEditView, taskToDelete: $taskToDelete, showDeleteConfirmation: $showDeleteConfirmation, selectedSort: $selectedSort, taskVM: taskVM, timerVM: timerVM, goalVM: goalVM)
+                                        CompletedTaskNavLink(goalVM: goalVM,taskVM: taskVM, timerVM: timerVM, task: task)
+                                    }
                                 }
                             }
                             
@@ -214,111 +242,49 @@ struct DateView: View {
                     }
                     .padding(.horizontal)
                     .padding(.vertical, 8)
-                    .background(Color.gray.opacity(0.15))
+                    .background(colorScheme == .dark ? .black.opacity(0.10) : .gray.opacity(0.15))
                     .sheet(item: $selectedTaskForSheet) { task in
-                        IncrementView(task: task, taskVM: taskVM)
+                        IncrementView(task: task, taskVM: taskVM, goalVM: goalVM, timerVM: timerVM)
                         
                     }
                 }
                 
             }
-            .background(Color.gray.opacity(0.15))
+            .background(colorScheme == .dark ? .black.opacity(0.10) : .gray.opacity(0.15))
             .onAppear {
+//                taskVM.fetchTasksForDate(for: date)
+//                timerVM.updateAllRunningTaskTimers()
+//                timerVM.setAllTimerVals()
+//                timerVM.beginProgressUpdates(for: Date())
+                
+            
                 taskVM.fetchTasksForDate(for: date)
-                timerVM.updateAllRunningTaskTimers()
-                timerVM.setAllTimerVals()
-                timerVM.beginProgressUpdates(for: Date())
+                timerVM.updateAllRunningTaskTimers(date: date, tasks: displayedTasks)
+                timerVM.setAllTimerVals(date: date, tasks: displayedTasks)
+                timerVM.beginProgressUpdates(for: date, tasks: displayedTasks)
+                timerVM.startSharedUITimerDate(date: date, tasks: displayedTasks)
+                goalVM.fetchGoalsForDate(for: date)
+                
 //                timerVM.countDownTimer(task: taskVM.newTask, seconds: 10, minutes: 1, hours: 0)
 //                displayedTasks = taskVM.sortedTasksAll(allTasks: taskVM.savedTasks, option: selectedSort)
             }
-//            .toolbar {
-//                ToolbarItem(placement: .navigationBarLeading) {
-//                    NavigationLink(destination: GoalsView(taskVM: taskVM, timerVM: timerVM, goalVM: goalVM)) {
-//                        Text("Goals")
-//                    }
-//                }
-//                ToolbarItem(placement: .navigationBarTrailing) {
-//                    NavigationLink(destination: Text("goal")) {
-//                        Image(systemName: "calendar")
-//                            .font(.title)
-//                            .foregroundColor(.blue)
-//                    }
-//                }
-//                ToolbarItem(placement: .navigationBarTrailing) {
-//                    NavigationLink(destination: Text("goal")) {
-//                        Text("Tasks")
-//                    }
-//                }
-//            }
-//            .onChange(of: taskVM.savedTasks) {
-//                displayedTasks = taskVM.sortedTasksAll(allTasks: taskVM.savedTasks, option: selectedSort)
-//            }
-//            .onChange(of: selectedSort) {
-//                displayedTasks = taskVM.sortedTasksAll(allTasks: taskVM.savedTasks, option: selectedSort)
-//            }
-            
-//            DailyTaskProgressFooter(taskVM: taskVM, timerVM: timerVM, displayedTasks: displayedTasks)
-            
-            
-//            HStack {
-//                                            Button(action: {
-//                                                isEditView.toggle()
-//                                            }) {
-//                                                Image(systemName: "minus")
-//                                                    .foregroundStyle(.blue)
-//                                                    .frame(width: 30, height: 30)
-//                                                    .background(Color(.secondarySystemBackground))
-//                                                    .clipShape(Circle())
-//                                            }
-//                                            .padding(.leading)
-//                                            .font(.body.bold())
-//                                            .foregroundColor(.blue)
-//
-//                                            Spacer()
-//                Button(action: {
-//                    withAnimation(.easeInOut(duration: 0.2)) {
-//                        isCompactView.toggle()
-//                    }
-//                }) {
-//
-//                    if isCompactView {
-//                        Image(systemName: "rectangle")
-//
-//                         } else {
-//                            Image(systemName: "rectangle")
-//                                 .font(.title2)
-//
-//                        }
-////                                                       .font(.title2)
-////                                                   } else {
-////                                                   Image(systemName: "rectangle")
-////
-////                                               }
-//                }
-//
-//                Spacer()
-//                Button(action: {
-//
-//                    showCreateTask.toggle()
-//                }) {
-//                    Image(systemName: "plus")
-//                        .foregroundStyle(.blue)
-//                        .frame(width: 30, height: 30)
-//                        .background(Color(.secondarySystemBackground))
-//                        .clipShape(Circle())
-//                }
-//            }
-//            .padding(.horizontal)
-//            .padding(.vertical, 8)
-//            .background(Color.gray.opacity(0.15))
-//            .sheet(item: $selectedTaskForSheet) { task in
-//                IncrementView(task: task, taskVM: taskVM)
-//
-//            }
-        
-        
-       
-        
-        
+            .alert("Delete all tasks for this date?  Tasks will be permanently deleted.", isPresented: $showDeleteForDayConfirmation) {
+                
+                Button(action: {
+                    
+                    taskVM.deleteMultipleTasksInView(tasks: displayedTasks, date: date)
+                    isEditView = false
+                    
+                    
+                }, label: {
+                    Text("Delete All Tasks")
+                        .foregroundColor(.red)
+                })
+                
+                Button("Cancel", role: .cancel) {
+                    showDeleteForDayConfirmation = false
+                    isEditView = false
+                }
+            }  
     }
 }

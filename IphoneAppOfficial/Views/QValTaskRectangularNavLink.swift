@@ -10,6 +10,8 @@ import CoreData
 
 
 struct QValTaskRectangularNavLink: View {
+    @ObservedObject var goalVM: GoalViewModel
+    
     @ObservedObject var taskVM: TaskViewModel
     
     @ObservedObject var timerVM: TimerViewModel
@@ -27,12 +29,12 @@ struct QValTaskRectangularNavLink: View {
     
     
     var body: some View {
-        NavigationLink(destination: TaskView(taskVM: taskVM, timerVM: timerVM, task: task)) {
+        NavigationLink(destination: TaskView( goalVM: goalVM, taskVM: taskVM, timerVM: timerVM, task: task)) {
             ZStack {
                 
                 
                 RoundedRectangle(cornerRadius: 16)
-                    .fill(colorScheme == .dark ? Color(.gray.opacity(0.15)) : Color.white)
+                    .fill(colorScheme == .dark ? .gray.opacity(0.20) : .white)
                 HStack {
                     VStack (alignment: .leading, spacing: 7) {
                         
@@ -75,8 +77,8 @@ struct QValTaskRectangularNavLink: View {
                     
                    
                 }
-                .frame(maxWidth: .infinity, minHeight: 140, maxHeight: 150, alignment: .topLeading)
-                .background(Color.white)
+                .frame(maxWidth: .infinity, minHeight: 140, maxHeight: 140, alignment: .topLeading)
+             
                 
                 
                 
@@ -90,6 +92,7 @@ struct QValTaskRectangularNavLink: View {
 }
 
 struct QValTaskRectangularNavLinkSmall: View {
+    @ObservedObject var goalVM: GoalViewModel
     @ObservedObject var taskVM: TaskViewModel
     @ObservedObject var timerVM: TimerViewModel
     @ObservedObject var task: Task
@@ -104,10 +107,10 @@ struct QValTaskRectangularNavLinkSmall: View {
     @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
-        NavigationLink(destination: TaskView(taskVM: taskVM, timerVM: timerVM, task: task)) {
+        NavigationLink(destination: TaskView( goalVM: goalVM, taskVM: taskVM, timerVM: timerVM, task: task)) {
             ZStack(alignment: .topLeading) { // <-- Align content to top-left
                 RoundedRectangle(cornerRadius: 16)
-                    .fill(colorScheme == .dark ? Color(.gray.opacity(0.15)) : Color.white)
+                    .fill(colorScheme == .dark ? .gray.opacity(0.20) : .white)
 
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 4) {
@@ -165,7 +168,7 @@ struct QValTaskRectangularNavLinkSmall: View {
 //}
 
 struct QValCurrentQuantityView: View {
-    
+    @Environment(\.colorScheme) var colorScheme
     @ObservedObject var task: Task
     @ObservedObject var timerVM: TimerViewModel
     
@@ -180,13 +183,13 @@ struct QValCurrentQuantityView: View {
         Text("\(Int(task.quantityval?.currentQuantity ?? 0)) / \(Int(task.quantityval?.totalQuantity ?? 0))")
             .font(.title2)
             .bold()
-                .foregroundColor(Color.black)
+            .foregroundColor(colorScheme == .dark ? .white : .black)
         }
     
 }
 
 struct QValCurrentQuantityViewSmall: View {
-    
+    @Environment(\.colorScheme) var colorScheme
     @ObservedObject var task: Task
     @ObservedObject var timerVM: TimerViewModel
     
@@ -200,13 +203,13 @@ struct QValCurrentQuantityViewSmall: View {
             
         Text("\(Int(task.quantityval?.currentQuantity ?? 0)) / \(Int(task.quantityval?.totalQuantity ?? 0))")
             .bold()
-                .foregroundColor(Color.black)
+            .foregroundColor(colorScheme == .dark ? .white : .black)
         }
     
 }
 
 struct QValTaskRemainingTimeView: View {
-    
+    @Environment(\.colorScheme) var colorScheme
     @ObservedObject var task: Task
     @ObservedObject var timerVM: TimerViewModel
     
@@ -216,17 +219,17 @@ struct QValTaskRemainingTimeView: View {
     
     var body: some View {
         
-       
-            
-        Text("Remaining: \(task.quantityval?.estimatedTimeRemaining.asHoursMinutesSeconds() ?? "")")
-            
-                .foregroundColor(Color.black)
+        
+        if task.quantityval?.timePerQuantityVal ?? 0 > 0 {
+            Text("Remaining: \(task.quantityval?.estimatedTimeRemaining.asHoursMinutesSeconds() ?? "")")
+                .foregroundColor(colorScheme == .dark ? .white : .black)
         }
+    }
     
 }
 
 struct QValTaskPercentView: View {
-    
+    @Environment(\.colorScheme) var colorScheme
     @ObservedObject var task: Task
     @ObservedObject var timerVM: TimerViewModel
     
@@ -239,7 +242,7 @@ struct QValTaskPercentView: View {
        
             
         Text("Progress: \(Int(task.quantityval?.percentCompletion ?? 0))%")
-                .foregroundColor(Color.black)
+            .foregroundColor(colorScheme == .dark ? .white : .black)
         }
     
 }

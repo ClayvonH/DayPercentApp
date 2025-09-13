@@ -8,10 +8,14 @@ import SwiftUI
 import CoreData
 
 struct IncrementView: View {
+    @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
 
     let task: Task
+    @State var goal: Goal?
     @ObservedObject var taskVM: TaskViewModel
+    @ObservedObject var goalVM: GoalViewModel
+    @ObservedObject var timerVM: TimerViewModel
     @State private var inputNumberText: String = ""
     @State private var showAlert: Bool = false
 //    @Binding var displayedTasks: [Task]
@@ -24,9 +28,10 @@ struct IncrementView: View {
                 .bold()
             
             
-            TextField("Enter Quantity Value", text: $inputNumberText)
-                .font(.title2)
-                .foregroundColor(.black)
+            TextField(" Enter New Quantity Value", text: $inputNumberText)
+                .font(.title)
+                .foregroundColor(colorScheme == .dark ? .white : .black)
+                .background(colorScheme == .dark ? Color.gray.opacity(0.2) : Color.white)
                 .keyboardType(.decimalPad)
                 .padding() // Adds padding inside the field
                 .frame(height: 55) // Makes it taller and easier to tap
@@ -43,6 +48,10 @@ struct IncrementView: View {
                 } else {
                     taskVM.incrementQuantityVal(task: task, incVal: newNumber)
 //                    displayedTasks = vm.sortedTasksAll(allTasks: vm.savedTasks, option: selectedSort)
+                    if let goal = goal {
+                        taskVM.GoalElapsedTime(goal: goal)
+                        taskVM.fetchTasks(for: goal)
+                    }
                     dismiss()
                     
                 }
@@ -72,7 +81,7 @@ struct IncrementView: View {
             })
             
             .frame(width: 350,height: 40)
-            .foregroundStyle(.black)
+            .foregroundStyle(colorScheme == .dark ? .white : .black)
             .background(Color(.gray.opacity(0.2)))
             .cornerRadius(15)
             .padding(.top, 40)

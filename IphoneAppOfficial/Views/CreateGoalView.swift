@@ -10,6 +10,7 @@ import SwiftUI
 import CoreData
 
 struct CreateGoalView: View {
+    @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) private var dismiss
 
     @ObservedObject var goalVM: GoalViewModel
@@ -29,6 +30,8 @@ struct CreateGoalView: View {
                 
                 TextField("Enter Goal Title", text: $goalTitle)
                     .padding(.leading)
+                    .font(.title)
+                    .bold()
                     .frame(width: 350,height: 40)
                     .background(Color(.systemGray6))
                 
@@ -76,7 +79,7 @@ struct CreateGoalView: View {
                     
                     .frame(width: 150,height: 40)
                     
-                    .foregroundStyle(.black)
+                    .foregroundColor(colorScheme == .dark ? .white : .black)
                     
                     .background(Color.gray.opacity(0.2))
                     .cornerRadius(15)
