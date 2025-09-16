@@ -406,7 +406,7 @@ Button("Simulate Next Day") {
                     ScrollView {
                         HStack {
                             Text("Daily Tasks")
-                                .font(.largeTitle)
+                                .font(.largeTitle) 
                                 .bold()
                                 .padding(.leading)
                                 .id("top")
