@@ -271,7 +271,7 @@ struct MonthYearPickerView: View {
     @Binding var selectedYear: Int
 
     let months = Calendar.current.monthSymbols
-    let years = Array(2000...2040)
+    let years = Array(2020...2035)
 
     var body: some View {
         HStack {

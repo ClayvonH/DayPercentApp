@@ -34,7 +34,9 @@ struct CreateTaskView: View {
         return Calendar.current.date(from: components) ?? Date()
     }()
     
-    
+    let startDate = Calendar.current.date(from: DateComponents(year: 2000))!
+    let endDate = Calendar.current.date(from: DateComponents(year: 2031, month: 12, day: 31))!
+
 
     @State private var timeBased: Bool = true
     @State var seconds:  Double = 0
@@ -242,7 +244,8 @@ struct CreateTaskView: View {
                     
                     if showDateAndTimer {
                         
-                        DatePicker("Select Date", selection: $selectedDate)
+                        DatePicker("Select Date", selection: $selectedDate,  in: startDate...endDate,
+                                   displayedComponents: .date)
                             .padding(.horizontal)
                             .onTapGesture {
                                 titleIsFocused = false
@@ -257,7 +260,7 @@ struct CreateTaskView: View {
                                 .padding(.trailing)
                             DatePicker(
                                 "Select Date",
-                                selection: $selectedDate,
+                                selection: $selectedDate, in: startDate...endDate,
                                 displayedComponents: [.date] // only date, no time
                             )
                             .datePickerStyle(.compact) // rectangular field only
