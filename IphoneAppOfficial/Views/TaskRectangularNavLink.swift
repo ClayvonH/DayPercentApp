@@ -26,6 +26,9 @@ struct TaskRectangularNavLink: View {
     
     var proxy: ScrollViewProxy
     
+    var goal: Goal?
+    
+    var showBoth: Bool?
     
     
     var body: some View {
@@ -52,10 +55,18 @@ struct TaskRectangularNavLink: View {
                     .padding(.leading)
                     Spacer()
                     VStack {
+                        if let both = showBoth {
+                            TaskDateTimeView(task: task, timerVM: timerVM, showBoth: both)
+                        }
                         
-                        TaskDateTimeView(task: task, timerVM: timerVM)
-                        Spacer()
-                        
+                        if let goal = goal {
+                            TaskDateTimeView(task: task, timerVM: timerVM, goal: goal)
+            
+                            Spacer()
+                        } else if showBoth == false || showBoth == nil {
+                            TaskDateTimeView(task: task, timerVM: timerVM)
+                            Spacer()
+                        }
                         StartTaskButtonView(task: task, timerVM: timerVM, taskVM: taskVM, selectedSort: $selectedSort, proxy: proxy)
                             .padding(.trailing, 25)
                         Spacer()
@@ -147,7 +158,9 @@ struct TaskRectangularNavLinkSimple: View {
     
     @Environment(\.colorScheme) var colorScheme
     
+    var goal: Goal?
     
+    var showBoth: Bool?
     
     var body: some View {
         NavigationLink(destination: TaskView( goalVM: goalVM, taskVM: taskVM, timerVM: timerVM, task: task)) {
@@ -168,10 +181,17 @@ struct TaskRectangularNavLinkSimple: View {
                     .padding(.leading)
                     Spacer()
                     VStack {
+                        if let both = showBoth {
+                            TaskDateTimeView(task: task, timerVM: timerVM, showBoth: both)
+                        }
                         
-                        TaskDateTimeView(task: task, timerVM: timerVM)
-                        Spacer()
-                        
+                        if let goal = goal {
+                            TaskDateTimeView(task: task, timerVM: timerVM, goal: goal)
+                            Spacer()
+                        } else if showBoth == nil || showBoth == false {
+                            TaskDateTimeView(task: task, timerVM: timerVM)
+                            Spacer()
+                        }
                         CompleteTaskButtonView(task: task, timerVM: timerVM, taskVM: taskVM)
                             .padding(.trailing, 25)
                         Spacer()
@@ -349,6 +369,8 @@ struct TaskDateTimeView: View {
     @Environment(\.colorScheme) var colorScheme
     @ObservedObject var task: Task
     @ObservedObject var timerVM: TimerViewModel
+    var goal: Goal?
+    var showBoth: Bool? 
     
 
     
@@ -356,16 +378,85 @@ struct TaskDateTimeView: View {
     
     var body: some View {
         
-       
-            
-        if let dateDue = task.dateDue {
-            if task.dateOnly == false {
-                Text(dateDue.formatted(.dateTime.hour(.defaultDigits(amPM: .abbreviated)).minute()))
+        if showBoth == true {
+            if let dateDue = task.dateDue {
+                if task.dateOnly == false {
+                    VStack {
+                        Text(
+                            dateDue.formatted(
+                                Date.FormatStyle
+                                    .dateTime
+                                    .month(.twoDigits)
+                                    .day(.twoDigits)
+                                    .year(.twoDigits)
+                            )
+                        )
+                        Text(dateDue.formatted(.dateTime.hour(.defaultDigits(amPM: .abbreviated)).minute()))
+                    }
+                } else {
+                    Text(
+                        dateDue.formatted(
+                            Date.FormatStyle
+                                .dateTime
+                                .month(.twoDigits)
+                                .day(.twoDigits)
+                                .year(.twoDigits)
+                        )
+                    )
+                    
+                }
             }
-          
         }
+        
+        
+        
+        if goal != nil {
+            if let dateDue = task.dateDue {
+                if task.dateOnly == false {
+                    VStack {
+                        Text(
+                            dateDue.formatted(
+                                Date.FormatStyle
+                                    .dateTime
+                                    .month(.twoDigits)
+                                    .day(.twoDigits)
+                                    .year(.twoDigits)
+                            )
+                        )
+                        Text(dateDue.formatted(.dateTime.hour(.defaultDigits(amPM: .abbreviated)).minute()))
+                    }
+                } else {
+                    Text(
+                        dateDue.formatted(
+                            Date.FormatStyle
+                                .dateTime
+                                .month(.twoDigits)
+                                .day(.twoDigits)
+                                .year(.twoDigits)
+                        )
+                    )
+                    
+                }
+            }
+            
+        } else if showBoth == nil {
+            if let dateDue = task.dateDue {
+                if task.dateOnly == false {
+                    Text(dateDue.formatted(.dateTime.hour(.defaultDigits(amPM: .abbreviated)).minute()))
+                } else {
+                    Text(
+                        dateDue.formatted(
+                            Date.FormatStyle
+                                .dateTime
+                                .month(.twoDigits)
+                                .day(.twoDigits)
+                                .year(.twoDigits)
+                        )
+                    )
+                }
+            }
         }
-    
+    }
 }
 
 struct TaskProgressBarView: View {

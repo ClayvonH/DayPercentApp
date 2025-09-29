@@ -20,21 +20,32 @@ struct GoalsView: View {
     @State private var isEditView = false
     @State private var showDeleteConfirmation = false
     @State private var goalToDelete: Goal? = nil
+    @State private var selectedSort: GoalSortOption = .recent
+    
+    var displayedGoals: [Goal] {
+//        taskVM.sortedTasksAll(allTasks: taskVM.savedTasks, option: selectedSort)
+        goalVM.sortedGoals(goals: goalVM.savedGoals, option: selectedSort)
+    }
     
     
     var body: some View {
       
             VStack(alignment: .leading, spacing: 16) {
-                
-                Text("Goals")
-                    .font(.largeTitle.bold())
-                    .fontDesign(.serif)
-                    .padding(.horizontal)
-                    .foregroundStyle(.primary)
+                HStack {
+                    Text("Goals")
+                        .font(.largeTitle.bold())
+                        .padding(.horizontal)
+                        .foregroundStyle(.primary)
+                    
+                    Spacer()
+                    
+                    GoalSortView(selectedSort: $selectedSort)
+                }
+                .frame(maxWidth: .infinity)
                 
                 ScrollView {
                     VStack(alignment: .center, spacing: 5) {
-                        ForEach(goalVM.savedGoals) { goal in
+                        ForEach(displayedGoals) { goal in
                             if !goal.isComplete {
                                 
                                 
@@ -85,6 +96,8 @@ struct GoalsView: View {
                                                     Text(goal.title ?? "No title")
                                                         .font(.title2).bold()
                                                         .foregroundColor(.primary)
+                                                        .multilineTextAlignment(.center)
+                                                    
                                                     
                                                     HStack {
                                                         Text("Due: ")
@@ -127,6 +140,15 @@ struct GoalsView: View {
                                                         Text(" \(goal.estimatedTimeRemaining.asHoursMinutesSecondsWithLabels())")
                                                         
                                                         
+                                                       
+                                                        
+                                                        
+                                                    }
+                                                    //                                            .background(Color.blue)
+                                                    .frame(maxWidth: 350)
+                                                    
+                                                    
+                                                    HStack {
                                                         if let tasks = goal.task as? Set<Task>, !tasks.isEmpty && goal.overAllTimeCombined > 0 {
                                                             ProgressView(value: goal.combinedElapsed, total: goal.overAllTimeCombined)
                                                                 .frame(width: 50, height: 10)
@@ -137,14 +159,7 @@ struct GoalsView: View {
                                                             
                                                         
                                                         }
-                                                        
-                                                        
                                                     }
-                                                    //                                            .background(Color.blue)
-                                                    .frame(maxWidth: 350)
-                                                    
-                                                    
-                                                    
                                                     
                                                 }
                                                 .frame(maxWidth: 380, alignment: .center)
@@ -257,7 +272,7 @@ struct GoalsView: View {
         .onAppear{
             goalVM.fetchGoals()
             goalVM.goalElapsedTimeAll(goals: goalVM.savedGoals)
-            
+            goalVM.lastActive(goals: goalVM.savedGoals)
         }
         
         

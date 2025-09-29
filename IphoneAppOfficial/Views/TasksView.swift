@@ -16,8 +16,9 @@ struct TasksView: View {
     @State private var showDeleteConfirmation = false
     @State private var showDeleteAllTasksConfirmation = false
     @State private var taskToDelete: Task? = nil
-    
-    
+    @State private var currentMonth: Date = Date()
+    @State private var monthView: Bool = false
+    @State private var showMonthViewAlert: Bool = false
     //    var dummyTask: Task
     
     @State private var showCreateTask = false
@@ -34,6 +35,8 @@ struct TasksView: View {
     //     }
     
     @State private var selectedSort: TaskSortOption = .dueDate
+    
+    @State private var showBoth = true
     
     var displayedTasks: [Task] {
         taskVM.sortedTasksAll(allTasks: taskVM.savedTasks, option: selectedSort)
@@ -73,6 +76,27 @@ struct TasksView: View {
                             .bold()
                             .padding(.leading)
                             .id("top")
+                        
+                        Button(action: {
+                            if taskVM.countTasks() <= 500 {
+                                monthView.toggle()
+                                if monthView == true {
+                                    taskVM.fetchTasks(month: currentMonth)
+                                } else {
+                                    taskVM.fetchTasks()
+                                }
+                                
+                            } else {
+                                showMonthViewAlert.toggle()
+                            }
+                       }){
+                           if monthView == true {
+                               Text("Display All Tasks")
+                           } else {
+                               Text("Monthly Tasks")
+                           }
+                       }
+                       .padding(.leading)
                         
                         
                         Spacer()
@@ -118,11 +142,11 @@ struct TasksView: View {
                                     } else {
                                         
                                         if task.timer != nil && !task.isComplete {
-                                            TaskRectangularNavLink(goalVM: goalVM, taskVM: taskVM, timerVM: timerVM, task: task, selectedSort: $selectedSort, proxy: proxy)
+                                            TaskRectangularNavLink(goalVM: goalVM, taskVM: taskVM, timerVM: timerVM, task: task, selectedSort: $selectedSort, proxy: proxy, showBoth: showBoth)
                                         } else if task.quantityval != nil && !task.isComplete {
-                                            QValTaskRectangularNavLink(goalVM: goalVM, taskVM: taskVM, timerVM: timerVM, task: task, selectedTask: $selectedTaskForSheet, isShowingUpdateSheet: $isShowingSheet,selectedSort: $selectedSort, proxy: proxy)
+                                            QValTaskRectangularNavLink(goalVM: goalVM, taskVM: taskVM, timerVM: timerVM, task: task, selectedTask: $selectedTaskForSheet, isShowingUpdateSheet: $isShowingSheet,selectedSort: $selectedSort, proxy: proxy, showBoth: showBoth)
                                         } else if !task.isComplete {
-                                            TaskRectangularNavLinkSimple(goalVM: goalVM, taskVM: taskVM, timerVM: timerVM, task: task)
+                                            TaskRectangularNavLinkSimple(goalVM: goalVM, taskVM: taskVM, timerVM: timerVM, task: task, showBoth: showBoth)
                                         }
                                     }
                                 }
@@ -153,7 +177,13 @@ struct TasksView: View {
             
             VStack (spacing: 0) {
                 
-                DailyTaskProgressFooter(taskVM: taskVM, timerVM: timerVM, goalVM: goalVM, displayedTasks: displayedTasks)
+                
+                if monthView == true {
+                    DailyTaskProgressFooter( month: currentMonth, taskVM: taskVM, timerVM: timerVM, goalVM: goalVM, displayedTasks: displayedTasks)
+                } else {
+                    
+                    DailyTaskProgressFooter(taskVM: taskVM, timerVM: timerVM, goalVM: goalVM, displayedTasks: displayedTasks)
+                }
                 
                 HStack {
                     Button(action: {
@@ -168,6 +198,23 @@ struct TasksView: View {
                     .padding(.leading)
                     .font(.body.bold())
                     .foregroundColor(.blue)
+                    if monthView == true {
+                        Spacer()
+                        
+                        Button(action: {
+                            // Go to previous month
+                            if let previousMonth = Calendar.current.date(byAdding: .month, value: -1, to: currentMonth) {
+                                currentMonth = previousMonth
+                                taskVM.fetchTasks(month: currentMonth)
+                                timerVM.setAllTimerVals()
+                                
+                            }
+                        }) {
+                            Image(systemName: "chevron.left")
+                            
+                        }
+                    }
+                   
                     
                     Spacer()
                     Button(action: {
@@ -191,7 +238,20 @@ struct TasksView: View {
                         //
                         //                                               }
                     }
-                    
+                    if monthView == true {
+                        Spacer()
+                        
+                        Button(action: {
+                            // Go to next month
+                            if let nextMonth = Calendar.current.date(byAdding: .month, value: 1, to: currentMonth) {
+                                currentMonth = nextMonth
+                                taskVM.fetchTasks(month: currentMonth)
+                                timerVM.setAllTimerVals()
+                            }
+                        }) {
+                            Image(systemName: "chevron.right")
+                        }
+                    }
                     Spacer()
                     Button(action: {
                         
@@ -216,12 +276,21 @@ struct TasksView: View {
         }
         .background(colorScheme == .dark ? .black.opacity(0.10) : .gray.opacity(0.15))
         .onAppear {
-            taskVM.fetchTasks()
+            if taskVM.countTasks() <= 500 {
+                taskVM.fetchTasks()
+            } else {
+                monthView = true 
+                taskVM.fetchTasks(month: currentMonth)
+            }
+          
             timerVM.updateAllRunningTaskTimers()
             timerVM.setAllTimerVals()
             timerVM.beginProgressUpdates(for: Date())
             //                timerVM.countDownTimer(task: taskVM.newTask, seconds: 10, minutes: 1, hours: 0)
             //                displayedTasks = taskVM.sortedTasksAll(allTasks: taskVM.savedTasks, option: selectedSort)
+        }
+        .alert("Cannot display more than 500 tasks.  You have \(taskVM.countTasks()) tasks", isPresented: $showMonthViewAlert) {
+
         }
  
     }

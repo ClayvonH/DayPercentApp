@@ -54,6 +54,8 @@ struct TaskView: View {
     @State private var showEmptyTitleAlert = false
     @State private var showLowQvalTotalAlert = false
     
+    @State private var showBoth = true 
+    
     func toggle(_ day: Weekday) {
         if selectedWeekdays.contains(day) {
             selectedWeekdays.remove(day)

@@ -130,7 +130,7 @@ struct DateView: View {
                                 if !task.isComplete {
                                     HStack {
                                         
-                                        EditTaskView(task: task, isEditView: $isEditView, taskToDelete: $taskToDelete, showDeleteConfirmation: $showDeleteConfirmation, selectedSort: $selectedSort, taskVM: taskVM, timerVM: timerVM, goalVM: goalVM)
+                                        EditTaskView(date: date, task: task, isEditView: $isEditView, taskToDelete: $taskToDelete, showDeleteConfirmation: $showDeleteConfirmation, selectedSort: $selectedSort, taskVM: taskVM, timerVM: timerVM, goalVM: goalVM)
                                            
                                         
                                         if isCompactView {

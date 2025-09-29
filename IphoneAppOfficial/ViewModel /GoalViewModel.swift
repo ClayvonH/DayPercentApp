@@ -59,6 +59,10 @@ class GoalViewModel: ObservableObject {
         
         newGoal.dateDue = date
         
+        newGoal.dateCreated = Date()
+        
+        newGoal.lastActive = Date()
+        
         CoreDataManager.shared.saveContext()
         
         print("\(newGoal.dateDue ?? Date())")
@@ -131,6 +135,55 @@ class GoalViewModel: ObservableObject {
 
         CoreDataManager.shared.saveContext()
     }
+    
+    func goalElapsedTimeForMonth(goal: Goal, month: Date) {
+        var totalElapsed: Double = 0.0
+        var overallTime: Double = 0.0
+
+        let calendar = Calendar.current
+
+        // Get start and end of the month
+        guard let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: month)),
+              let startOfNextMonth = calendar.date(byAdding: .month, value: 1, to: startOfMonth) else {
+            return
+        }
+
+        // Safely cast to NSSet and convert to [Task]
+        guard let taskSet = goal.task else { return }
+        let tasks = taskSet.compactMap { $0 as? Task }
+
+        // Only include tasks that fall inside this month
+        let monthTasks = tasks.filter { task in
+            if let dueDate = task.dateDue {
+                return dueDate >= startOfMonth && dueDate < startOfNextMonth
+            }
+            return false
+        }
+
+        // Now sum elapsed/overall time
+        for task in monthTasks {
+            if let timer = task.timer {
+                totalElapsed += timer.elapsedTime
+                overallTime += timer.countdownNum
+            }
+
+            if let quantity = task.quantityval {
+                totalElapsed += quantity.timeElapsed
+                overallTime += quantity.totalTimeEstimate
+            }
+        }
+
+        // Save results to goal (optional, since this is month-specific)
+        goal.combinedElapsed = totalElapsed
+        goal.overAllTimeCombined = overallTime
+
+        let percentage = overallTime > 0 ? (totalElapsed / overallTime) * 100 : 0
+        goal.percentComplete = percentage
+        goal.estimatedTimeRemaining = max(0, overallTime - totalElapsed)
+
+        CoreDataManager.shared.saveContext()
+    }
+
 
     func GoalElapsedTimeUIUpdateOnly(goal: Goal ) {
         var totalElapsed: Double = 0.0
@@ -181,6 +234,11 @@ class GoalViewModel: ObservableObject {
         return filtered
     }
     
+    func goalCount(goal: Goal) {
+        goal.taskCount = Int32(goal.task?.count ?? 0)
+        CoreDataManager.shared.saveContext()
+    }
+    
     func addTaskToGoal (goalr: Goal, title: String) {
         let newTask = Task(context: container.viewContext)
         let newTimer = TimerEntity(context: container.viewContext)
@@ -190,6 +248,7 @@ class GoalViewModel: ObservableObject {
         newTask.lastActive = Date()
         goalr.isComplete = false
         CoreDataManager.shared.saveContext()
+        goalCount(goal: goalr)
         fetchGoals()
         
     }
@@ -288,5 +347,95 @@ class GoalViewModel: ObservableObject {
 
 
 
+    }
+    
+    func sortedGoals(goals: [Goal], option: GoalSortOption) -> [Goal] {
+        let goals = goals
+        
+        switch option {
+        case .title:
+              return goals.sorted {
+                  ($0.title ?? "").localizedCaseInsensitiveCompare($1.title ?? "") == .orderedAscending
+              }
+            
+        case .zaTitle:
+            return goals.sorted {
+                ($0.title ?? "").localizedCaseInsensitiveCompare($1.title ?? "") == .orderedDescending
+            }
+            
+        case .dueDate:
+            return goals.sorted { ($0.dateDue ?? .distantFuture) < ($1.dateDue ?? .distantFuture) }
+            
+        case .progress:
+            return goals.sorted {
+                let progress1 = $0.percentComplete
+                let progress2 = $1.percentComplete 
+                return progress1 > progress2
+            }
+
+        case .newest:
+            return goals.sorted { ($0.dateCreated ?? Date()) > ($1.dateCreated ?? Date())}
+            
+        case .oldest:
+            return goals.sorted { ($0.dateCreated ?? Date()) < ($1.dateCreated ?? Date())}
+            
+        case .recent:
+            return goals.sorted { ($0.lastActive ?? Date()) > ($1.lastActive ?? Date()) }
+        }
+    }
+    
+    func sortedCompletedGoals(goals: [Goal], option: CompletedGoalSortOption) -> [Goal] {
+        let goals = goals
+        
+        switch option {
+        case .title:
+              return goals.sorted {
+                  ($0.title ?? "").localizedCaseInsensitiveCompare($1.title ?? "") == .orderedAscending
+              }
+            
+        case .zaTitle:
+            return goals.sorted {
+                ($0.title ?? "").localizedCaseInsensitiveCompare($1.title ?? "") == .orderedDescending
+            }
+            
+        case .dueDate:
+            return goals.sorted { ($0.dateDue ?? .distantFuture) < ($1.dateDue ?? .distantFuture) }
+
+        case .recentCompleted:
+            return goals.sorted { ($0.dateCompleted ?? Date()) > ($1.dateCompleted ?? Date())}
+            
+        case .oldestCompletion:
+            return goals.sorted { ($0.dateCompleted ?? Date()) < ($1.dateCompleted ?? Date())}
+            
+ 
+        }
+    }
+    
+//    enum CompletedGoalSortOption: String, CaseIterable, Identifiable {
+//        case title = "Alphabetical"
+//        case zaTitle = "Z-A Alphabetical"
+//        case dueDate = "Due Date"
+//        case recentCompleted = "Recent Completion"
+//        case oldestCompletion = "Oldest Completion"
+//       
+//
+//        var id: Self { self }
+//
+//        var displayName: String {
+//            switch self {
+//            case .title: return "Alphabetical"
+//            case .zaTitle: return "Z-A Alphabetical"
+//            case .dueDate: return "Due Date"
+//            case .recentCompleted: return "Newest"
+//            case .oldestCompletion: return "Oldest"
+//           
+//            }
+//        }
+//    }
+    
+    func lastActive(goals: [Goal]) {
+       for goal in goals {
+           print("\(goal.title ?? "No title") - \(goal.lastActive ?? Date())")
+        }
     }
 }

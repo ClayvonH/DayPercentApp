@@ -31,9 +31,17 @@ struct GoalView: View {
     @State private var editDueDate: Bool = false
     @State private var editDate: Bool = false
     @State private var showDeleteForGoalConfirmation = false
+    @State private var monthView: Bool = false
     
+    @State private var currentMonth: Date = Date()
+    @State private var showMonthViewAlert: Bool = false
+   
     
-
+    private let monthFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "LLLL yyyy" // Example: "September 2025"
+        return formatter
+    }()
     
 //    var dummyTask: Task
     
@@ -64,6 +72,16 @@ struct GoalView: View {
        
         
             VStack {
+//                HStack{
+////                            Text("Tasks For")
+////                                .font(.title)
+////                                .bold()
+//                    Text(currentMonth, formatter: monthFormatter)
+//                        .font(.title3)
+//                        .bold()
+//                       
+//                }
+//                .frame(maxWidth: .infinity)
                 
                 if isEditView {
                     Button(action: {
@@ -79,7 +97,8 @@ struct GoalView: View {
                     
                     
                     ScrollView (){
-                        
+                                                                               
+                 
                         HStack {
                             if isEditView {
                                 Button(action: {
@@ -143,7 +162,7 @@ struct GoalView: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         
-                        
+                    
                         
                         if editDueDate {
                             VStack {
@@ -214,8 +233,30 @@ struct GoalView: View {
                                 Text(goalVM.formatDate(goal.dateDue ?? Date()))
                                     .font(.title3)
                                     .bold()
+                                
+                             
                                     
-                                 
+                                 Button(action: {
+                                     if goal.taskCount <= 500 {
+                                         monthView.toggle()
+                                         if monthView == true {
+                                             taskVM.fetchTasks(goal: goal, month: currentMonth)
+                                         } else {
+                                             taskVM.fetchTasks(for: goal)
+                                         }
+                                         
+                                     } else {
+                                         showMonthViewAlert.toggle()
+                                     }
+                                }){
+                                    if monthView == true {
+                                        Text("Display All Tasks")
+                                    } else {
+                                        Text("Monthly Tasks")
+                                    }
+                                }
+                                .padding(.leading)
+                                
                             }
                             .padding(.leading)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -250,11 +291,11 @@ struct GoalView: View {
                                         } else {
                                             
                                             if task.timer != nil && !task.isComplete {
-                                                TaskRectangularNavLink(goalVM: goalVM,taskVM: taskVM, timerVM: timerVM, task: task, selectedSort: $selectedSort, proxy: proxy)
+                                                TaskRectangularNavLink( goalVM: goalVM, taskVM: taskVM, timerVM: timerVM, task: task, selectedSort: $selectedSort, proxy: proxy, goal: goal)
                                             } else if task.quantityval != nil && !task.isComplete {
-                                                QValTaskRectangularNavLink(goalVM: goalVM,taskVM: taskVM, timerVM: timerVM, task: task, selectedTask: $selectedTaskForSheet, isShowingUpdateSheet: $isShowingSheet,selectedSort: $selectedSort, proxy: proxy)
+                                                QValTaskRectangularNavLink(goalVM: goalVM,taskVM: taskVM, timerVM: timerVM, task: task, selectedTask: $selectedTaskForSheet, isShowingUpdateSheet: $isShowingSheet,selectedSort: $selectedSort, proxy: proxy, goal: goal)
                                             } else if !task.isComplete {
-                                                TaskRectangularNavLinkSimple(goalVM: goalVM,taskVM: taskVM, timerVM: timerVM, task: task)
+                                                TaskRectangularNavLinkSimple(goalVM: goalVM,taskVM: taskVM, timerVM: timerVM, task: task, goal: goal)
                                             }
                                         }
                                     }
@@ -265,16 +306,19 @@ struct GoalView: View {
 //                            Text("\(goal.title ?? "No Title")")
 //                                .font(.title)
 //                                .bold()
-                            
-                            ForEach(displayedTasks, id: \.objectID) { task in
-                                if task.isComplete {
-                                    HStack {
-                                        EditTaskView(goal: goal, task: task, isEditView: $isEditView, taskToDelete: $taskToDelete, showDeleteConfirmation: $showDeleteConfirmation, selectedSort: $selectedSort, taskVM: taskVM, timerVM: timerVM, goalVM: goalVM)
-                                        CompletedTaskNavLink(goalVM: goalVM,taskVM: taskVM, timerVM: timerVM, task: task)
+                            if displayedTasks.contains(where: { $0.isComplete }) {
+                                Text("Completed Tasks")
+                                    .font(.title)
+                                    .bold()
+                                ForEach(displayedTasks, id: \.objectID) { task in
+                                    if task.isComplete {
+                                        HStack {
+                                            EditTaskView(goal: goal, task: task, isEditView: $isEditView, taskToDelete: $taskToDelete, showDeleteConfirmation: $showDeleteConfirmation, selectedSort: $selectedSort, taskVM: taskVM, timerVM: timerVM, goalVM: goalVM)
+                                            CompletedTaskNavLink(goalVM: goalVM,taskVM: taskVM, timerVM: timerVM, task: task)
+                                        }
                                     }
                                 }
                             }
-                            
                             //                        }
                         }
                     }
@@ -286,9 +330,38 @@ struct GoalView: View {
                 }
                 
                 VStack (spacing: 0) {
-                    
-                    DailyTaskProgressFooter(goal: goal, taskVM: taskVM, timerVM: timerVM, goalVM: goalVM, displayedTasks: displayedTasks)
-                    
+                    if monthView == true {
+                        DailyTaskProgressFooter( goal: goal, month: currentMonth, taskVM: taskVM, timerVM: timerVM, goalVM: goalVM, displayedTasks: displayedTasks)
+                    } else {
+                        DailyTaskProgressFooter( goal: goal, taskVM: taskVM, timerVM: timerVM, goalVM: goalVM, displayedTasks: displayedTasks)
+                    }
+//                    HStack {
+//                        Button(action: {
+//                            // Go to previous month
+//                            if let previousMonth = Calendar.current.date(byAdding: .month, value: -1, to: currentMonth) {
+//                                currentMonth = previousMonth
+//                                taskVM.fetchTasks(goal: goal, month: currentMonth)
+//                            }
+//                        }) {
+//                            Image(systemName: "chevron.left")
+//                        }
+//                        
+//                        Text(currentMonth, formatter: monthFormatter)
+//                            .font(.headline)
+//                            .frame(maxWidth: .infinity)
+//                        
+//                        Button(action: {
+//                            // Go to next month
+//                            if let nextMonth = Calendar.current.date(byAdding: .month, value: 1, to: currentMonth) {
+//                                currentMonth = nextMonth
+//                                taskVM.fetchTasks(goal: goal, month: currentMonth)
+//                            }
+//                        }) {
+//                            Image(systemName: "chevron.right")
+//                        }
+//                    }
+//                    .padding()
+
                     HStack {
                         Button(action: {
                             isEditView.toggle()
@@ -302,6 +375,22 @@ struct GoalView: View {
                         .padding(.leading)
                         .font(.body.bold())
                         .foregroundColor(.blue)
+                        if monthView == true {
+                            Spacer()
+                            
+                            Button(action: {
+                                // Go to previous month
+                                if let previousMonth = Calendar.current.date(byAdding: .month, value: -1, to: currentMonth) {
+                                    currentMonth = previousMonth
+                                    taskVM.fetchTasks(goal: goal, month: currentMonth)
+                                    timerVM.setAllTimerVals(goal: goal, goalTasks: displayedTasks)
+                                    
+                                }
+                            }) {
+                                Image(systemName: "chevron.left")
+                            }
+                        }
+                       
                         
                         Spacer()
                         Button(action: {
@@ -325,7 +414,20 @@ struct GoalView: View {
                             //
                             //                                               }
                         }
-                        
+                        if monthView == true {
+                            Spacer()
+                            
+                            Button(action: {
+                                // Go to next month
+                                if let nextMonth = Calendar.current.date(byAdding: .month, value: 1, to: currentMonth) {
+                                    currentMonth = nextMonth
+                                    taskVM.fetchTasks(goal: goal, month: currentMonth)
+                                    timerVM.setAllTimerVals(goal: goal, goalTasks: displayedTasks)
+                                }
+                            }) {
+                                Image(systemName: "chevron.right")
+                            }
+                        }
                         Spacer()
                         Button(action: {
                             
@@ -350,7 +452,14 @@ struct GoalView: View {
             }
             .background(colorScheme == .dark ? .black.opacity(0.10) : .gray.opacity(0.15))
             .onAppear {
-                taskVM.fetchTasks(for: goal)
+                goalVM.goalCount(goal: goal)
+                if goal.taskCount <= 100 {
+                    monthView = false
+                    taskVM.fetchTasks(for: goal)
+                } else {
+                    monthView = true
+                    taskVM.fetchTasks(goal: goal, month: currentMonth)
+                }
                 timerVM.updateAllRunningTaskTimers(goal: goal, goalTasks: displayedTasks)
                 timerVM.setAllTimerVals(goal: goal, goalTasks: displayedTasks)
                 timerVM.beginProgressUpdates(for: Date(), goalTasks: displayedTasks)
@@ -379,13 +488,17 @@ struct GoalView: View {
                     isEditView = false
                 }
             }
-
+            .alert("Cannot display more than 500 tasks. You have \(goal.taskCount) tasks for: \(goal.title ?? "Goal")", isPresented: $showMonthViewAlert) {
+                
+              
+            }
 //            .toolbar {
-//                ToolbarItem(placement: .navigationBarLeading) {
-//                    NavigationLink(destination: GoalsView(goalVM: goalVM)) {
-//                        Text("Goals")
-//                    }
+//                ToolbarItem(placement: .principal) {
+//                    Text(currentMonth, formatter: monthFormatter)
+//                        .font(.title3)
+//                        .bold()
 //                }
+//            }
 //                ToolbarItem(placement: .navigationBarTrailing) {
 //                    NavigationLink(destination: Text("goal")) {
 //                        Image(systemName: "calendar")

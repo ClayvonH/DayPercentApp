@@ -34,8 +34,15 @@ struct CreateTaskView: View {
         return Calendar.current.date(from: components) ?? Date()
     }()
     
+    @State private var dateOnlyDate: Date = {
+        var components = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+        components.hour = 23
+        components.minute = 59
+        return Calendar.current.date(from: components) ?? Date()
+    }()
+    
     let startDate = Calendar.current.date(from: DateComponents(year: 2000))!
-    let endDate = Calendar.current.date(from: DateComponents(year: 2031, month: 12, day: 31))!
+    let endDate = Calendar.current.date(from: DateComponents(year: 2045, month: 12, day: 31))!
 
 
     @State private var timeBased: Bool = true
@@ -58,7 +65,7 @@ struct CreateTaskView: View {
     @State private var showSheet = false
     @State private var showDateAndTimer = false
     @State private var showDateOnly = false
-    @State private var dateOnly = false
+    @State private var dateOnly = true
 
     
     func toggle(_ day: Weekday) {
@@ -244,8 +251,9 @@ struct CreateTaskView: View {
                     
                     if showDateAndTimer {
                         
-                        DatePicker("Select Date", selection: $selectedDate,  in: startDate...endDate,
-                                   displayedComponents: .date)
+                        DatePicker("Select Date", selection: $selectedDate,
+                                   in: startDate...endDate,
+                                   displayedComponents: [.date, .hourAndMinute])
                             .padding(.horizontal)
                             .onTapGesture {
                                 titleIsFocused = false
@@ -260,8 +268,10 @@ struct CreateTaskView: View {
                                 .padding(.trailing)
                             DatePicker(
                                 "Select Date",
-                                selection: $selectedDate, in: startDate...endDate,
-                                displayedComponents: [.date] // only date, no time
+                                selection: $dateOnlyDate,
+                                in: startDate...endDate,
+                                displayedComponents: [.date]
+                                
                             )
                             .datePickerStyle(.compact) // rectangular field only
                             .labelsHidden()
@@ -282,29 +292,31 @@ struct CreateTaskView: View {
                         
                         if let goal = goal {
                             if repeatingTasks == false {
-                                let task = goalVM.addTaskToGoalTwo(goalr: goal, title: taskTitle, dueDate: selectedDate, dateOnly: dateOnly)
+                                
+                                let task = goalVM.addTaskToGoalTwo(goalr: goal, title: taskTitle, dueDate: showDateAndTimer == true ? selectedDate : dateOnlyDate, dateOnly: dateOnly)
                                 newTask = task
                                 showTimerSelectView = true
-                            } else {
-                                let newDates = taskVM.generateDates(for: selectedWeekdays, until: selectedDate, usingTimeFrom: selectedDate)
                                 
-                                let task = goalVM.addTaskToGoalTwo(goalr: goal, title: taskTitle, dueDate: selectedDate)
+                            } else {
+                                let newDates = taskVM.generateDates(for: selectedWeekdays, until: showDateAndTimer == true ? selectedDate : dateOnlyDate, usingTimeFrom: selectedDate)
+                                
+                                let task = goalVM.addTaskToGoalTwo(goalr: goal, title: taskTitle, dueDate: showDateAndTimer == true ? selectedDate : dateOnlyDate)
                                 taskVM.repeatingTrue(task: task)
                                 taskVM.repeatTask(task: task, dates: newDates)
                                 newTask = task
                                 
-                                
+                                goalVM.goalCount(goal: goal)
                                 showTimerSelectView = true
                             }
                         } else {
                             if repeatingTasks == false {
-                                let task = taskVM.createTaskAndReturn(title: taskTitle, dueDate: selectedDate, dateOnly: dateOnly)
+                                let task = taskVM.createTaskAndReturn(title: taskTitle, dueDate: showDateAndTimer == true ? selectedDate : dateOnlyDate, dateOnly: dateOnly)
                                 newTask = task
                                 showTimerSelectView = true
                             } else {
-                                let newDates = taskVM.generateDates(for: selectedWeekdays, until: selectedDate, usingTimeFrom: selectedDate)
+                                let newDates = taskVM.generateDates(for: selectedWeekdays, until: showDateAndTimer == true ? selectedDate : dateOnlyDate, usingTimeFrom: selectedDate)
                                 
-                                let task = taskVM.createTaskAndReturn(title: taskTitle, dueDate: selectedDate, dateOnly: dateOnly)
+                                let task = taskVM.createTaskAndReturn(title: taskTitle, dueDate: showDateAndTimer == true ? selectedDate : dateOnlyDate, dateOnly: dateOnly)
                                 taskVM.repeatingTrue(task: task)
                                 taskVM.repeatTask(task: task, dates: newDates)
                                 newTask = task
@@ -382,8 +394,7 @@ struct CreateTaskView: View {
         .navigationBarHidden(true)
             
         } else {
-            
-            
+
             TimerSelectView(
                 taskVM: taskVM,
                 goalVM: goalVM,
@@ -391,7 +402,7 @@ struct CreateTaskView: View {
                 goal: goal,
                 task: newTask ?? Task()
             )
-        
+
     }
 
         

@@ -16,12 +16,12 @@ struct EditTaskView: View {
     @Binding var taskToDelete: Task?
     @Binding var showDeleteConfirmation: Bool
     @Binding var selectedSort: TaskSortOption
-//    @Binding var displayedTasks: [Task]
+    //    @Binding var displayedTasks: [Task]
     @ObservedObject var taskVM: TaskViewModel
     @ObservedObject var timerVM: TimerViewModel
     @ObservedObject var goalVM: GoalViewModel
+    @State private var showFinalDeleteConfirmation = false
     
-
     var body: some View {
         HStack {
             if isEditView {
@@ -42,47 +42,37 @@ struct EditTaskView: View {
                         if task.repeating {
                             Button("Delete this task", role: .destructive) {
                                 if let date = date {
-                                    taskVM.deleteTaskForDate(date: date, task: task)
+                                    taskVM.deleteTaskForDate(date: date, task: taskToDelete ?? task)
+                                    
                                 } else if let goal = goal {
-                                    taskVM.deleteTaskForGoal(goal: goal, task: task)
+                                    taskVM.deleteTaskForGoal(goal: goal, task: taskToDelete ?? task)
                                     goalVM.GoalElapsedTime(goal: goal)
                                 } else {
                                     taskVM.deleteTask(task)
                                 }
-                            
-                             
-                               
+                                
+                                
+                                
                                 
                             }
-                            Button("Delete all repeating tasks: \(task.title ?? "")", role: .destructive) {
-                                if let date = date {
-                                    taskVM.deleteRepeatingTasks(date: date, task: task)
-                                } else if let goal = goal {
-                                    taskVM.deleteRepeatingTasks(goal: goal, task: task)
-                                    goalVM.GoalElapsedTime(goal: goal)
-                                   
-                                } else {
-                                    taskVM.deleteRepeatingTasks(task: task)
-                                }
-                            
-                              
+                            Button("Delete all repeating tasks: \(taskToDelete?.title ?? "")", role: .destructive) {
                                 
-                                
-                               
+                                showFinalDeleteConfirmation = true
+                   
                             }
                         } else {
-                            Button("Delete: \(task.title ?? "no title")", role: .destructive) {
+                            Button("Delete: \(taskToDelete?.title ?? "no title")", role: .destructive) {
                                 if let date = date {
-                                    taskVM.deleteTaskForDate(date: date, task: task)
+                                    taskVM.deleteTaskForDate(date: date, task: taskToDelete ?? task)
                                 } else {
-                                    taskVM.deleteTask(task)
+                                    taskVM.deleteTask(taskToDelete ?? task)
                                 }
                                 if let goal = goal {
                                     goalVM.GoalElapsedTime(goal: goal)
                                     taskVM.fetchTasks(for: goal)
                                 }
-                              
-//                                displayedTasks = taskVM.sortedTasksAll(allTasks: displayedTasks, option: selectedSort)
+                                
+                                //                                displayedTasks = taskVM.sortedTasksAll(allTasks: displayedTasks, option: selectedSort)
                                 
                             }
                         }
@@ -91,11 +81,32 @@ struct EditTaskView: View {
                         isEditView = false
                     }
                 }
+                .alert("Are you absolutely sure? All repeating tasks \(taskToDelete?.title ?? "no title")in storage will be permanently deleted.", isPresented: $showFinalDeleteConfirmation) {
+                    Button("Yes, Delete All Repeating Tasks", role: .destructive) {
+                        // Now actually delete
+                        if let date = date {
+                            taskVM.deleteRepeatingTasks(date: date, task: taskToDelete ?? task)
+                        } else if let goal = goal {
+                            taskVM.deleteRepeatingTasks(goal: goal, task: taskToDelete ?? task)
+                            goalVM.GoalElapsedTime(goal: goal)
+                            
+                        } else {
+                            taskVM.deleteRepeatingTasks(task: taskToDelete ?? task)
+                        }
+                        
+                        
+                        
+                      
+                    }
+                    Button("Cancel", role: .cancel) {
+                        isEditView = false
+                    }
+                }
+                
+                // Your actual Task card UI (or another subview)
             }
-
-            // Your actual Task card UI (or another subview)
+            
         }
-        
     }
 }
 

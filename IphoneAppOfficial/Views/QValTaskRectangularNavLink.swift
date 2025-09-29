@@ -24,8 +24,11 @@ struct QValTaskRectangularNavLink: View {
     @Binding var selectedSort: TaskSortOption
     var proxy: ScrollViewProxy
     
+    var goal: Goal?
+    
     @Environment(\.colorScheme) var colorScheme
     
+    var showBoth: Bool?
     
     
     var body: some View {
@@ -67,9 +70,17 @@ struct QValTaskRectangularNavLink: View {
                     .padding(.leading)
                     Spacer()
                     VStack {
-                        TaskDateTimeView(task: task, timerVM: timerVM)
-                        Spacer()
-                        
+                        if let both = showBoth {
+                            TaskDateTimeView(task: task, timerVM: timerVM, showBoth: both)
+                            Spacer()
+                        }
+                        if let goal = goal {
+                            TaskDateTimeView(task: task, timerVM: timerVM, goal: goal)
+                            Spacer()
+                        } else if showBoth == false || showBoth == nil {
+                            TaskDateTimeView(task: task, timerVM: timerVM)
+                            Spacer()
+                        }
                         UpdateTaskButtonView(task: task, timerVM: timerVM, taskVM: taskVM, selectedTaskForSheet: $selectedTask, isShowingSheet: $isShowingUpdateSheet, selectedSort: $selectedSort, proxy: proxy)
                             .padding(.trailing, 25)
                         Spacer()

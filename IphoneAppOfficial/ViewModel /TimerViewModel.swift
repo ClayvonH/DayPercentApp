@@ -39,7 +39,7 @@ class TimerViewModel: ObservableObject {
     
     @Published var dailyTasksPercentComplete: Double = 0
     @Published var dailyTasksTimeRemaining: Double = 0
-    
+    @Published var goalMonthTimeRemaining: Double = 0
     @Published var combinedElapsedProgress: Double = 0
     @Published var totalTaskTime: Double = 0
     @Published var taskProgressPercent: Double = 0
@@ -343,7 +343,7 @@ class TimerViewModel: ObservableObject {
     func beginProgressUpdates(for date: Date, tasks: [Task]? = nil, goalTasks: [Task]? = nil) {
         progressUpdateTimer?.cancel()
 
-        progressUpdateTimer = Timer.publish(every: 0.5, on: .main, in: .common)
+        progressUpdateTimer = Timer.publish(every: 1, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in
                 guard let self = self else { return }
@@ -597,6 +597,11 @@ class TimerViewModel: ObservableObject {
 
     func startTimer(_ task: Task) {
         task.lastActive = Date()
+        if let goal = task.goal {
+            goal.lastActive = Date()
+            print("goal last active \(goal.lastActive ?? Date())")
+            CoreDataManager.shared.saveContext()
+        }
         print("last active \(task.lastActive ?? Date())")
         
 

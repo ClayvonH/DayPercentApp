@@ -20,22 +20,35 @@ struct CompletedGoals: View {
     @State private var isEditView = false
     @State private var showDeleteConfirmation = false
     @State private var goalToDelete: Goal? = nil
+    @State private var selectedSort: CompletedGoalSortOption = .recentCompleted
+    var displayedGoals: [Goal] {
+//        taskVM.sortedTasksAll(allTasks: taskVM.savedTasks, option: selectedSort)
+        goalVM.sortedCompletedGoals(goals: goalVM.savedGoals, option: selectedSort)
+    }
     
     var body: some View {
         
         VStack(alignment: .leading, spacing: 16) {
             
             
+            HStack {
             Text("Completed Goals")
                 .font(.largeTitle.bold())
-                .fontDesign(.serif)
                 .padding(.horizontal)
                 .foregroundStyle(.primary)
+                .padding(.top)
+                .padding(.bottom, 8)
+            
+            Spacer()
+            
+            CompletedGoalSortView(selectedSort: $selectedSort)
+        }
+        .frame(maxWidth: .infinity)
             
             ScrollView {
                 VStack(alignment: .center, spacing: 5) {
                     
-                    ForEach(goalVM.savedGoals) { goal in
+                    ForEach(displayedGoals) { goal in
                         
                         if goal.isComplete == true {
                             
@@ -85,6 +98,7 @@ struct CompletedGoals: View {
                                                 HStack {
                                                     Text(goal.title ?? "No title")
                                                         .font(.title2).bold()
+                                                        .multilineTextAlignment(.center)
                                                         .foregroundColor(.primary)
                                                     
                                                     Image(systemName: "checkmark")

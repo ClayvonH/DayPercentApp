@@ -28,11 +28,9 @@ class TaskViewModel: ObservableObject {
     
     
     func fetchTasks() {
-        let taskrequest = NSFetchRequest<Task>(entityName: "Task")
         
-
+        let taskrequest = NSFetchRequest<Task>(entityName: "Task")
         do {
-            
             savedTasks = try container.viewContext.fetch(taskrequest)
             dailyTasks = getTasks(for: Date()) // <- Refresh dailyTasks here
             print("fetched tasks")
@@ -40,12 +38,10 @@ class TaskViewModel: ObservableObject {
             print("error fetching \(error)")
         }
         
-        
-        
     }
     
     func fetchTasksForDate(for date: Date) {
-        
+
         let request = NSFetchRequest<Task>(entityName: "Task")
         
         // Calculate the start and end of the day
@@ -82,7 +78,53 @@ class TaskViewModel: ObservableObject {
         }
     }
 
+    func fetchTasks(goal: Goal, month: Date) {
+        let request = NSFetchRequest<Task>(entityName: "Task")
+        
+        let calendar = Calendar.current
+        guard let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: month)),
+              let startOfNextMonth = calendar.date(byAdding: .month, value: 1, to: startOfMonth) else {
+            return
+        }
+        
+        request.predicate = NSPredicate(format: "goal == %@ AND dateDue >= %@ AND dateDue < %@", goal, startOfMonth as NSDate, startOfNextMonth as NSDate)
+        
+        do {
+            let tasksForGoal = try container.viewContext.fetch(request)
+            goalTasks = tasksForGoal
+            print("Fetched \(tasksForGoal.count) tasks for goal: \(goal.title ?? "Unnamed Goal") in month: \(month)")
+        } catch {
+            print("Error fetching tasks for goal: \(error)")
+        }
+    }
     
+    func fetchTasks(month: Date) {
+        let request = NSFetchRequest<Task>(entityName: "Task")
+        
+        let calendar = Calendar.current
+        guard let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: month)),
+              let startOfNextMonth = calendar.date(byAdding: .month, value: 1, to: startOfMonth) else {
+            return
+        }
+        
+        // Filter only by month range, not by goal
+        request.predicate = NSPredicate(
+            format: "dateDue >= %@ AND dateDue < %@",
+            startOfMonth as NSDate,
+            startOfNextMonth as NSDate
+        )
+        
+        do {
+            let tasksInMonth = try container.viewContext.fetch(request)
+            savedTasks = tasksInMonth
+            print("Fetched \(tasksInMonth.count) tasks in month: \(month)")
+        } catch {
+            print("Error fetching tasks: \(error)")
+        }
+    }
+
+
+
     
     func getTasks(for date: Date) -> [Task] {
         let filtered = dateTasks.filter {
@@ -112,6 +154,10 @@ class TaskViewModel: ObservableObject {
     }
     
     func completeTask(task: Task) {
+        if let goal = task.goal {
+            goal.lastActive = Date()
+            CoreDataManager.shared.saveContext()
+        }
         if let timer = task.timer {
           
             timer.elapsedTime = timer.countdownNum
@@ -263,6 +309,7 @@ class TaskViewModel: ObservableObject {
             newTask.seriesID = task.seriesID
         }
         CoreDataManager.shared.saveContext()
+        
         fetchTasks()
     }
 
@@ -419,6 +466,17 @@ class TaskViewModel: ObservableObject {
     func incrementQuantityVal( task: Task, incVal: Double) {
         if task.isComplete && incVal < task.quantityval?.totalQuantity ?? 0 {
             task.isComplete = false
+        }
+        
+        if let goal = task.goal {
+            goal.lastActive = Date()
+            CoreDataManager.shared.saveContext()
+            print("Saved goal last update on inc")
+            if let active = goal.lastActive {
+                print("\(active)")
+            } else {
+                print("didn't save last active")
+            }
         }
         
         task.quantityval?.currentQuantity = incVal
@@ -734,4 +792,22 @@ class TaskViewModel: ObservableObject {
 
         CoreDataManager.shared.saveContext()
     }
+    
+    func goalCount(goal: Goal) {
+        goal.taskCount = Int32(goal.task?.count ?? 0)
+        CoreDataManager.shared.saveContext()
+    }
+    
+    func countTasks() -> Int {
+        let request = NSFetchRequest<Task>(entityName: "Task")
+        
+        do {
+            let count = try container.viewContext.count(for: request)
+            return count
+        } catch {
+            print("Error counting tasks: \(error)")
+            return 0
+        }
+    }
+
 }

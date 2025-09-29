@@ -271,7 +271,7 @@ struct MonthYearPickerView: View {
     @Binding var selectedYear: Int
 
     let months = Calendar.current.monthSymbols
-    let years = Array(2020...2035)
+    let years = Array(2020...2045)
 
     var body: some View {
         HStack {
@@ -315,16 +315,46 @@ struct CalendarView: View {
     @State private var showSelectMonth: Bool = false
 
     private let calendar = Calendar.current
+    
+    private func determineColor(for date: Date) -> Color {
+        if calendar.isDateInToday(date) {
+            return .blue
+        } else if goalVM.savedGoals.contains(where: {
+            guard let goalDate = $0.dateDue else { return false }
+            return calendar.isDate(goalDate, inSameDayAs: date)
+        }) {
+            return .green
+        } else if taskVM.savedTasks.contains(where: {
+            guard let taskDate = $0.dateDue else { return false }
+            return calendar.isDate(taskDate, inSameDayAs: date)
+        }) {
+            return .red
+        } else {
+            if colorScheme == .dark {
+                return .white.opacity(0.8)
+            } else {
+                return .black
+            }
+        }
+    }
 
     var body: some View {
         VStack {
             monthNavigation
             monthPicker
             calendarGrid
+            dateColors
         }
         .padding(.top, 30)
         .frame(maxHeight: .infinity, alignment: .top)
         .background(colorScheme == .dark ? .gray.opacity(0.15) : .white)
+        .onAppear {
+            taskVM.fetchTasks(month: displayedMonth)
+            goalVM.fetchGoals()
+        }
+        .onChange(of: displayedMonth) {
+            taskVM.fetchTasks(month: displayedMonth)
+        }
         
     }
 
@@ -348,6 +378,7 @@ struct CalendarView: View {
                 MonthYearPickerView(selectedMonth: $selectedMonth, selectedYear: $selectedYear)
                     .onChange(of: selectedMonth) {
                         updateDisplayedMonth()
+                        
                     }
                     .onChange(of: selectedYear) {
                         updateDisplayedMonth()
@@ -357,31 +388,95 @@ struct CalendarView: View {
     }
 
     private var calendarGrid: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: 10) {
-            ForEach(currentMonthDates, id: \.self) { date in
-                NavigationLink(destination: LazyView(DateView(
-                    date: date,
-                    taskVM: taskVM,
-                    goalVM: goalVM,
-                    timerVM: timerVM
-                ))) {
-                    Text("\(calendar.component(.day, from: date))")
-                        .fontWeight(.bold)
-//                        .foregroundColor(Color.black)
-                        .foregroundColor(
-                                               calendar.isDateInToday(date)
-                                                   ? .blue   // today
-                                               : (colorScheme == .dark ? .white.opacity(0.8) : .black) // dark/light
-                                           )
-                        .bold(
-                            calendar.isDateInToday(date) ? true : false
-                            )
-                        .frame(width: 40, height: 80)
-                        .clipShape(Circle())
+        VStack {
+            // Weekday labels
+            HStack {
+                ForEach(calendar.shortWeekdaySymbols, id: \.self) { symbol in
+                    Text(symbol.prefix(3)) // e.g. "Sun", "Mon"
+                        .font(.caption)
+                        .frame(maxWidth: .infinity)
                 }
             }
+
+            // Days of the month
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: 10) {
+                ForEach(paddedMonthDates, id: \.self) { date in
+                    if let date = date {
+                        NavigationLink(destination: LazyView(DateView(
+                            date: date,
+                            taskVM: taskVM,
+                            goalVM: goalVM,
+                            timerVM: timerVM
+                        ))) {
+                            Text("\(calendar.component(.day, from: date))")
+                                .foregroundColor(determineColor(for: date))
+                                .frame(width: 40, height: 60)
+                                .clipShape(Circle())
+                        }
+                    } else {
+                        // Empty slot for padding
+                        Text("")
+                            .frame(width: 40, height: 40)
+                    }
+                }
+            }
+            .padding()
         }
+        .padding(.top)
+    }
+
+    private var paddedMonthDates: [Date?] {
+        guard let range = calendar.range(of: .day, in: .month, for: displayedMonth),
+              let firstOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: displayedMonth)) else {
+            return []
+        }
+
+        // Day of week offset (0 = Sunday, 6 = Saturday)
+        let firstWeekday = calendar.component(.weekday, from: firstOfMonth)
+
+        // Padding before the 1st
+        let padding = Array(repeating: nil as Date?, count: firstWeekday - 1)
+
+        // Actual days of the month
+        let days = range.compactMap { day -> Date? in
+            calendar.date(byAdding: .day, value: day - 1, to: firstOfMonth)
+        }
+
+        return padding + days
+    }
+
+    private var dateColors: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Circle()
+                    .fill(Color.red)
+                    .frame(width: 12, height: 12)
+                Text("Tasks Due")
+                    .padding(.trailing, 4)
+                
+                Circle()
+                    .fill(Color.green)
+                    .frame(width: 12, height: 12)
+                Text("Goal Due")
+            }
+         
+            HStack {
+                Circle()
+                    .fill(colorScheme == .light ? Color.black : Color.white)
+                    .frame(width: 12, height: 12)
+                Text("No Tasks")
+                    .padding(.trailing, 4)
+                
+                Circle()
+                    .fill(Color.blue)
+                    .frame(width: 12, height: 12)
+                Text("Current Day")
+            }
+      
+        }
+        .font(.subheadline) // smaller text for legend
         .padding()
+
     }
 
     private var currentMonthDates: [Date] {
@@ -421,9 +516,12 @@ struct CalendarView: View {
     }
 }
 
+
+
 // LazyView to defer loading
 struct LazyView<Content: View>: View {
     let build: () -> Content
     init(_ build: @autoclosure @escaping () -> Content) { self.build = build }
     var body: Content { build() }
 }
+
