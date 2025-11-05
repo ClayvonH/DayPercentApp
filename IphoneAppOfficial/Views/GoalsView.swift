@@ -111,9 +111,10 @@ struct GoalsView: View {
                                                     
                                                     
                                                     
-                                                    if let tasks = goal.task as? Set<Task> {
+                                                    if let tasks = goal.task as? Set<AppTask> {
                                                         let completed = tasks.filter { $0.isComplete }.count
                                                         let total = tasks.count
+                                                        let percentDone = (Double(completed) / Double(total)) * 100
                                                         
                                                         let _: Double = total > 0 ? (Double(completed) / Double(total)) * 100 : 0.0
                                                         //                                                    let percentString = String(format: "%.2f", percent)
@@ -124,7 +125,9 @@ struct GoalsView: View {
                                                             
                                                             Text("\(completed)/\(total)")
                                                             
-                                                            
+                                                            if total > 0 {
+                                                                Text("\(String(format: "%.1f", percentDone))%")
+                                                            }
                                                         }
                                                         
                                                     }
@@ -134,14 +137,15 @@ struct GoalsView: View {
                                                     
                                                     
                                                     HStack {
-                                                        Text("Time Remaining:")
-                                                            .bold()
-                                                            .font(.headline)
-                                                        Text(" \(goal.estimatedTimeRemaining.asHoursMinutesSecondsWithLabels())")
-                                                        
-                                                        
-                                                       
-                                                        
+                                                        if goal.estimatedTimeRemaining > 0 {
+                                                            Text("Time Remaining:")
+                                                                .bold()
+                                                                .font(.headline)
+                                                            Text(" \(goal.estimatedTimeRemaining.asHoursMinutesSecondsWithLabels())")
+                                                            
+                                                            
+                                                            
+                                                        }
                                                         
                                                     }
                                                     //                                            .background(Color.blue)
@@ -149,15 +153,16 @@ struct GoalsView: View {
                                                     
                                                     
                                                     HStack {
-                                                        if let tasks = goal.task as? Set<Task>, !tasks.isEmpty && goal.overAllTimeCombined > 0 {
-                                                            ProgressView(value: goal.combinedElapsed, total: goal.overAllTimeCombined)
-                                                                .frame(width: 50, height: 10)
-                                                                .tint(Color.accentColor)
-                                                                .clipShape(Capsule())
-                                                            
-                                                            Text(" \(Int(goal.percentComplete))%")
-                                                            
-                                                        
+                                                        if let tasks = goal.task as? Set<AppTask>, !tasks.isEmpty && goal.overAllTimeCombined > 0 {
+                                                            if goal.combinedElapsed < goal.overAllTimeCombined {
+                                                                ProgressView(value: goal.combinedElapsed, total: goal.overAllTimeCombined)
+                                                                    .frame(width: 50, height: 10)
+                                                                    .tint(Color.accentColor)
+                                                                    .clipShape(Capsule())
+                                                                
+                                                                Text(" \(Int(goal.percentComplete))%")
+                                                                
+                                                            }
                                                         }
                                                     }
                                                     

@@ -1,5 +1,19 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="23788.4" systemVersion="24F74" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
+    <entity name="AppTask" representedClassName="AppTask" syncable="YES" codeGenerationType="class">
+        <attribute name="dateCreated" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="dateDue" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="dateOnly" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="isComplete" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="lastActive" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="reminder" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="repeating" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="seriesID" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="title" optional="YES" attributeType="String"/>
+        <relationship name="goal" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Goal" inverseName="task" inverseEntity="Goal"/>
+        <relationship name="quantityval" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="QuantityValue" inverseName="task" inverseEntity="QuantityValue"/>
+        <relationship name="timer" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="TimerEntity" inverseName="task" inverseEntity="TimerEntity"/>
+    </entity>
     <entity name="Goal" representedClassName="Goal" syncable="YES" codeGenerationType="class">
         <attribute name="combinedElapsed" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
         <attribute name="date" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
@@ -13,7 +27,7 @@
         <attribute name="percentComplete" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
         <attribute name="taskCount" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="title" optional="YES" attributeType="String"/>
-        <relationship name="task" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Task" inverseName="goal" inverseEntity="Task"/>
+        <relationship name="task" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="AppTask" inverseName="goal" inverseEntity="AppTask"/>
     </entity>
     <entity name="Item" representedClassName="Item" syncable="YES" codeGenerationType="class">
         <attribute name="timestamp" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
@@ -26,20 +40,7 @@
         <attribute name="timePerQuantityVal" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
         <attribute name="totalQuantity" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
         <attribute name="totalTimeEstimate" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
-        <relationship name="task" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Task" inverseName="quantityval" inverseEntity="Task"/>
-    </entity>
-    <entity name="Task" representedClassName="Task" syncable="YES" codeGenerationType="class">
-        <attribute name="dateCreated" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="dateDue" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="dateOnly" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
-        <attribute name="isComplete" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
-        <attribute name="lastActive" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="repeating" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
-        <attribute name="seriesID" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
-        <attribute name="title" optional="YES" attributeType="String"/>
-        <relationship name="goal" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Goal" inverseName="task" inverseEntity="Goal"/>
-        <relationship name="quantityval" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="QuantityValue" inverseName="task" inverseEntity="QuantityValue"/>
-        <relationship name="timer" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="TimerEntity" inverseName="task" inverseEntity="TimerEntity"/>
+        <relationship name="task" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="AppTask" inverseName="quantityval" inverseEntity="AppTask"/>
     </entity>
     <entity name="TimerEntity" representedClassName="TimerEntity" syncable="YES" codeGenerationType="class">
         <attribute name="cdTimerEndDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
@@ -57,6 +58,6 @@
         <attribute name="timerComplete" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
         <attribute name="timerManualToggled" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
         <attribute name="totalTimeEstimate" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
-        <relationship name="task" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Task" inverseName="timer" inverseEntity="Task"/>
+        <relationship name="task" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="AppTask" inverseName="timer" inverseEntity="AppTask"/>
     </entity>
 </model>

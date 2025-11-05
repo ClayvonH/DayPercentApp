@@ -14,7 +14,7 @@ struct CompletedTaskNavLink: View {
     
     @ObservedObject var timerVM: TimerViewModel
     
-    @ObservedObject var task: Task
+    @ObservedObject var task: AppTask
     
     @Environment(\.colorScheme) var colorScheme
     

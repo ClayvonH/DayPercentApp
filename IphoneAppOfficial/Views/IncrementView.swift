@@ -11,7 +11,7 @@ struct IncrementView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
 
-    let task: Task
+    let task: AppTask
     @State var goal: Goal?
     @ObservedObject var taskVM: TaskViewModel
     @ObservedObject var goalVM: GoalViewModel
@@ -23,22 +23,37 @@ struct IncrementView: View {
     var body: some View {
         
         VStack {
+            Text("\(task.title ?? "")")
+                .font(.title)
+                .bold()
+            
+            Text("\(Int(task.quantityval?.currentQuantity ?? 0))/ \(Int(task.quantityval?.totalQuantity ?? 0))")
+                .font(.title)
+                .bold()
+        }
+        .padding(.bottom)
+       
+        
+        VStack {
+            
+         
+            
             Text("Increment")
-                .font(.title2)
+                .font(.title)
                 .bold()
             
             
             TextField(" Enter New Quantity Value", text: $inputNumberText)
                 .font(.title)
                 .foregroundColor(colorScheme == .dark ? .white : .black)
-                .background(colorScheme == .dark ? Color.gray.opacity(0.2) : Color.white)
+//                .background(colorScheme == .dark ? Color.gray.opacity(0.2) : Color.white)
                 .keyboardType(.decimalPad)
                 .padding() // Adds padding inside the field
                 .frame(height: 55) // Makes it taller and easier to tap
-            
+                .multilineTextAlignment(.center) 
                 .cornerRadius(10)
                 .contentShape(Rectangle()) // Ensures the whole rectangle is tappable
-               
+           
             
             Button(action: {
                 

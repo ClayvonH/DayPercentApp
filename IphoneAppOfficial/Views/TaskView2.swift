@@ -13,7 +13,7 @@ import CoreData
 struct TaskView2: View {
     @ObservedObject var taskVM: TaskViewModel
     @ObservedObject var timerVM: TimerViewModel
-    @State var task: Task
+    @State var task: AppTask
     @Environment(\.managedObjectContext) private var context
     
     @Environment(\.colorScheme) var colorScheme

@@ -19,7 +19,7 @@ import CoreData
 struct CreateTaskView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) private var dismiss
-    @State var newTask: Task?
+    @State var newTask: AppTask?
 //    @ObservedObject var task: Task
     @State var goal: Goal?
     @State var date: Date?
@@ -28,6 +28,12 @@ struct CreateTaskView: View {
     @ObservedObject var timerVM: TimerViewModel
     @State private var taskTitle: String = ""
     @State private var selectedDate: Date = {
+        var components = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+        components.hour = 12
+        components.minute = 0
+        return Calendar.current.date(from: components) ?? Date()
+    }()
+    @State private var selectedDateCal: Date = {
         var components = Calendar.current.dateComponents([.year, .month, .day], from: Date())
         components.hour = 12
         components.minute = 0
@@ -42,7 +48,7 @@ struct CreateTaskView: View {
     }()
     
     let startDate = Calendar.current.date(from: DateComponents(year: 2000))!
-    let endDate = Calendar.current.date(from: DateComponents(year: 2045, month: 12, day: 31))!
+    let endDate = Calendar.current.date(from: DateComponents(year: 2031, month: 12, day: 31))!
 
 
     @State private var timeBased: Bool = true
@@ -66,6 +72,7 @@ struct CreateTaskView: View {
     @State private var showDateAndTimer = false
     @State private var showDateOnly = false
     @State private var dateOnly = true
+    @State private var reminders: Bool = false
 
     
     func toggle(_ day: Weekday) {
@@ -92,7 +99,7 @@ struct CreateTaskView: View {
             
            
                 
-                VStack (alignment: .leading){
+                VStack (alignment: .center){
                     HStack {
                         Text("Create Task")
                             .font(.largeTitle)
@@ -102,6 +109,7 @@ struct CreateTaskView: View {
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.bottom,10)
                     .padding(.top,10)
+                    
                     if let goal = goal {
                         Text("For: \(goal.title ?? "")")
                             .font(.title)
@@ -133,6 +141,7 @@ struct CreateTaskView: View {
                             .focused($titleIsFocused)
                         
                         if titleIsFocused {
+                    
                             Button("Done") {
                                 titleIsFocused = false // This dismisses the keyboard
                             }
@@ -148,11 +157,18 @@ struct CreateTaskView: View {
                     
                     
                     Button(action: {
+                        titleIsFocused = false
                         repeatingTasks.toggle()
                     }, label: {
-                        Text("Repeats")
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .contentShape(Rectangle())
+                        if repeatingTasks == true {
+                            Text("Repeats")
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .contentShape(Rectangle())
+                        } else {
+                            Text("Doesn't Repeat")
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .contentShape(Rectangle())
+                        }
                         
                     }
                     )
@@ -217,6 +233,10 @@ struct CreateTaskView: View {
                     HStack {
                         Spacer()
                         Button(action: {
+                            if let date = date {
+                                selectedDate = taskVM.normalizedDate(from: date)
+                            }
+                            titleIsFocused = false
                             showDateAndTimer.toggle()
                             showDateOnly = false
                             dateOnly = false
@@ -233,6 +253,10 @@ struct CreateTaskView: View {
                         Text("Or")
                         
                         Button(action: {
+                            if let date = date {
+                                selectedDate = taskVM.normalizedDate(from: date)
+                            }
+                            titleIsFocused = false
                             showDateOnly.toggle()
                             showDateAndTimer = false
                             dateOnly = true
@@ -279,7 +303,29 @@ struct CreateTaskView: View {
                         }
                         .frame(maxWidth: .infinity)
                     }
-                  
+                    HStack {
+                        Text("Reminders:")
+                            .font(.title2)
+                            .bold()
+                            
+                        Button(action: {
+                            reminders.toggle()
+                        }, label: {
+                            if reminders == true {
+                                Text("Reminders On")
+                                    .contentShape(Rectangle())
+                            } else {
+                                Text("Reminders Off")
+                                    .contentShape(Rectangle())
+                            }
+                        })
+                        .frame(width: 150,height: 35)
+                        .foregroundStyle(Color.white)
+                        .background(Color.blue)
+                        .cornerRadius(15)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.top)
                     
                     Button(action: {
                         
@@ -293,16 +339,16 @@ struct CreateTaskView: View {
                         if let goal = goal {
                             if repeatingTasks == false {
                                 
-                                let task = goalVM.addTaskToGoalTwo(goalr: goal, title: taskTitle, dueDate: showDateAndTimer == true ? selectedDate : dateOnlyDate, dateOnly: dateOnly)
+                                let task = goalVM.addTaskToGoalTwo(goalr: goal, title: taskTitle, dueDate: showDateAndTimer == true ? selectedDate : dateOnlyDate, dateOnly: dateOnly, reminders: reminders)
                                 newTask = task
                                 showTimerSelectView = true
                                 
                             } else {
                                 let newDates = taskVM.generateDates(for: selectedWeekdays, until: showDateAndTimer == true ? selectedDate : dateOnlyDate, usingTimeFrom: selectedDate)
                                 
-                                let task = goalVM.addTaskToGoalTwo(goalr: goal, title: taskTitle, dueDate: showDateAndTimer == true ? selectedDate : dateOnlyDate)
+                                let task = goalVM.addTaskToGoalTwo(goalr: goal, title: taskTitle, dueDate: showDateAndTimer == true ? selectedDate : dateOnlyDate, dateOnly: dateOnly, reminders: reminders)
                                 taskVM.repeatingTrue(task: task)
-                                taskVM.repeatTask(task: task, dates: newDates)
+                                taskVM.repeatTask(task: task, dates: newDates, reminders: reminders)
                                 newTask = task
                                 
                                 goalVM.goalCount(goal: goal)
@@ -310,15 +356,15 @@ struct CreateTaskView: View {
                             }
                         } else {
                             if repeatingTasks == false {
-                                let task = taskVM.createTaskAndReturn(title: taskTitle, dueDate: showDateAndTimer == true ? selectedDate : dateOnlyDate, dateOnly: dateOnly)
+                                let task = taskVM.createTaskAndReturn(title: taskTitle, dueDate: showDateAndTimer == true ? selectedDate : dateOnlyDate, dateOnly: dateOnly, reminders: reminders)
                                 newTask = task
                                 showTimerSelectView = true
                             } else {
                                 let newDates = taskVM.generateDates(for: selectedWeekdays, until: showDateAndTimer == true ? selectedDate : dateOnlyDate, usingTimeFrom: selectedDate)
                                 
-                                let task = taskVM.createTaskAndReturn(title: taskTitle, dueDate: showDateAndTimer == true ? selectedDate : dateOnlyDate, dateOnly: dateOnly)
+                                let task = taskVM.createTaskAndReturn(title: taskTitle, dueDate: showDateAndTimer == true ? selectedDate : dateOnlyDate, dateOnly: dateOnly, reminders: reminders)
                                 taskVM.repeatingTrue(task: task)
-                                taskVM.repeatTask(task: task, dates: newDates)
+                                taskVM.repeatTask(task: task, dates: newDates, reminders: reminders)
                                 newTask = task
                                 
                                 
@@ -365,6 +411,19 @@ struct CreateTaskView: View {
                     
                     
                 }
+                .onAppear {
+                    if date != nil {
+                        
+                        selectedDateCal = taskVM.normalizedDate(from: date)
+                        
+                        dateOnlyDate = taskVM.normalizedDateOnlyDate(from: date)
+                
+                    }
+                }
+//                .onChange(of: selectedDate) { oldValue, newValue in
+//                    selectedDate = taskVM.normalizedDate(from: date)
+//                    dateOnlyDate = taskVM.normalizedDateOnlyDate(from: date)
+//                }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .padding(.top, 30)
           
@@ -400,7 +459,7 @@ struct CreateTaskView: View {
                 goalVM: goalVM,
                 timerVM: timerVM,
                 goal: goal,
-                task: newTask ?? Task()
+                task: newTask ?? AppTask()
             )
 
     }

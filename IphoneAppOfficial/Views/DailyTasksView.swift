@@ -8,6 +8,7 @@
 
 import SwiftUI
 import CoreData
+import StoreKit
 
 struct DailyTasksView: View {
     @AppStorage("appearance") private var appearance: Appearance = .system
@@ -23,24 +24,28 @@ struct DailyTasksView: View {
     @ObservedObject var taskVM: TaskViewModel
     @ObservedObject var goalVM: GoalViewModel
     @ObservedObject var timerVM: TimerViewModel
+    @ObservedObject var storeVM: StoreViewModel
+    
     
     @State private var isCompactView = false
-    @State private var selectedTaskForSheet: Task? = nil
+    @State private var selectedTaskForSheet: AppTask? = nil
     @State private var isShowingSheet = false
     @State private var isEditView = false
     @State private var showDeleteConfirmation = false
     @State private var showDeleteAllTasksConfirmation = false
-    @State private var taskToDelete: Task? = nil
+    @State private var taskToDelete: AppTask? = nil
     @State private var showDeleteForDayConfirmation = false
     @State private var currentDay = Calendar.current.startOfDay(for: Date())
     @State private var showCreateTask = false
     @State private var selectedSort: TaskSortOption = .dueDate
+    @State private var storeNavigationActive = false
+    @State private var showPaywall = false
     
-    var displayedTasks: [Task] {
+    var displayedTasks: [AppTask] {
         taskVM.sortedTasksDate(date: today, option: selectedSort)
     }
     
-    var sortedTasks: [Task] {
+    var sortedTasks: [AppTask] {
         taskVM.sortedTasksDate(date: date, option: selectedSort)
     }
     
@@ -60,10 +65,16 @@ struct DailyTasksView: View {
         timerVM.setAllTimerVals(date: date, tasks: displayedTasks)
         timerVM.beginProgressUpdates(for: date, tasks: displayedTasks)
         timerVM.startSharedUITimerDate(date: date, tasks: displayedTasks)
+        taskVM.fetchTasks(month: date)
     }
     
     var body: some View {
         NavigationStack {
+            // Remove the old NavigationLink
+            // NavigationLink(destination: GoalsView(...), isActive: $storeNavigationActive) { EmptyView() }
+
+           
+
             VStack {
                 
 //#if DEBUG
@@ -237,12 +248,17 @@ struct DailyTasksView: View {
                     }
                 }
             }
-            
+            .sheet(isPresented: $showPaywall) {
+                GoalsPaywallView(storeVM: storeVM)
+            }
             // ✅ Initial fetch
             .onAppear {
                 refreshFor(date: today)
+               
             }
-            
+            .navigationDestination(isPresented: $storeNavigationActive) {
+                GoalsView(taskVM: taskVM, timerVM: timerVM, goalVM: goalVM)
+            }
             .alert("Delete all tasks for this date?  Tasks will be permanently deleted.", isPresented: $showDeleteForDayConfirmation) {
                 Button(action: {
                     taskVM.deleteMultipleTasksInView(tasks: displayedTasks, date: date)
@@ -259,11 +275,28 @@ struct DailyTasksView: View {
             }
             
             .toolbar {
+                
                 ToolbarItem(placement: .navigationBarLeading) {
-                    NavigationLink(destination: GoalsView(taskVM: taskVM, timerVM: timerVM, goalVM: goalVM)) {
+                    Button {
+                        if storeVM.isUnlocked {
+                            storeNavigationActive = true
+                        } else {
+                            showPaywall = true
+                        }
+                    } label: {
                         Text("Goals")
+                            .bold()
+                            .foregroundColor(.blue)
                     }
                 }
+            
+        
+                
+//                ToolbarItem(placement: .navigationBarLeading) {
+//                    NavigationLink(destination: GoalsView(taskVM: taskVM, timerVM: timerVM, goalVM: goalVM)) {
+//                        Text("Goals")
+//                    }
+//                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     NavigationLink(destination: CalendarView(taskVM: taskVM, timerVM: timerVM, goalVM: goalVM)) {
                         Image(systemName: "calendar")
@@ -274,11 +307,14 @@ struct DailyTasksView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     NavigationLink(destination: TasksView(taskVM: taskVM, goalVM: goalVM, timerVM: timerVM)) {
                         Text("Tasks")
+                            .bold()
+                            .foregroundColor(.blue)
                     }
                 }
                 ToolbarItem(placement: .navigationBarLeading) {
-                    NavigationLink(destination: LightDarkMode(appearance: $appearance)) {
-                        Image(systemName: "lightbulb")
+                    NavigationLink(destination: LightDarkMode(appearance: $appearance, taskVM: taskVM, goalVM: goalVM)) {
+                        Image(systemName: "sun.max.fill")
+//                            .bold()
                           
                     }
                 }
@@ -286,3 +322,37 @@ struct DailyTasksView: View {
         }
     }
 }
+
+
+//struct PaywallView: View {
+//    
+//    
+//    @ObservedObject var storeVM: StoreViewModel
+//
+//    var body: some View {
+//        VStack(spacing: 20) {
+//            Text("Unlock Goals")
+//                .font(.largeTitle)
+//                .bold()
+//
+//            Text("Upgrade once to unlock the Goals feature forever.")
+//                .multilineTextAlignment(.center)
+//
+//            if let product = storeVM.products.first {
+//                Button("Unlock for \(product.displayPrice)") {
+//                    Task {
+//                        await storeVM.purchaseGoals()
+//                    }
+//                }
+//                .buttonStyle(.borderedProminent)
+//            } else {
+//                ProgressView("Loading…")
+//            }
+//        }
+//        .padding()
+//        .task {
+//            // Load products when shown
+//            await storeVM.fetchProducts()
+//        }
+//    }
+//}

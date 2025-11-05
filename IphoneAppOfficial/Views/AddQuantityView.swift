@@ -15,7 +15,7 @@ struct AddQuantityView: View {
     @ObservedObject var goalVM: GoalViewModel
     @ObservedObject var timerVM: TimerViewModel
     @State var goal: Goal?
-    @ObservedObject var task: Task
+    @ObservedObject var task: AppTask
     @State var seconds:  Double = 0
     @State var minutes: Double = 0
     @State var hours: Double = 0

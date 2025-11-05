@@ -5,34 +5,83 @@
 //  Created by Clayvon Hatton on 9/27/25.
 //
 import SwiftUI
-    
+import CoreData
+
     struct LightDarkMode: View {
         @Binding var appearance: Appearance
-        
+        @ObservedObject var taskVM: TaskViewModel
+        @ObservedObject var goalVM: GoalViewModel
+        @State private var showDeleteAllTasksAlert: Bool = false
         var body: some View {
+         
             VStack {
-                VStack (spacing: 20) {
-                Text("Light Mode Dark Mode")
-                    .font(.title)
+                
+               Text("Settings")
+                    .font(.largeTitle)
                     .bold()
                     .padding(.top)
-                    .padding(.bottom, 80)
-               
-                    ForEach(Appearance.allCases) { option in
-                        Button {
-                            appearance = option
-                        } label: {
-                            Label(option.rawValue.capitalized, systemImage: option.iconName)
-                                .bold()
-                                .font(.title)
-                                .padding()
+                    .padding(.bottom, 20)
+                   
+                VStack {
+             
+                    VStack {
+                        Text("Light Mode / Dark Mode")
+                            .font(.title3)
+                            .bold()
+                        HStack {
+                            ForEach(Appearance.allCases) { option in
+                                Button {
+                                    appearance = option
+                                } label: {
+                                    Label(option.rawValue.capitalized, systemImage: option.iconName)
+                                        .bold()
+                                        .font(.headline)
+                                        .padding()
+                                }
+                            }
                         }
                     }
+                   
                 }
-            
+//                Button(action: {
+//               
+//                        showDeleteAllTasksAlert = true
+//                   
+//                    
+//                }, label: {
+//         
+//                        Text("Delete All Tasks")
+//                        .foregroundColor(.red)
+//                        .bold()
+//                        .font(.title3)
+//                        .padding()
+//                })
+//                Spacer()
             }
             .frame(maxHeight: .infinity, alignment: .top)
             .transaction { $0.disablesAnimations = true } // prevents flicker
+            .alert("This will delete ALL NON GOAL TASKS stored in app.  Tasks will be permanently deleted.  Are you sure?", isPresented: $showDeleteAllTasksAlert) {
+                
+                Button(action: {
+//                    goalVM.deleteAllGoalsTasks(goals: goalVM.savedGoals)
+                    taskVM.deleteAllTasksWithoutGoals()
+//                    goalVM.resetAllGoalsInfo()
+                    
+                    
+                }, label: {
+                    Text("Delete All Tasks")
+                        .foregroundColor(.red)
+                })
+                
+                Button("Cancel", role: .cancel) {
+                    showDeleteAllTasksAlert = false
+        
+                }
+            }
+            .onAppear {
+                goalVM.fetchGoals()
+             
+            }
         }
     }
 

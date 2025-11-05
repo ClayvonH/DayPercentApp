@@ -13,7 +13,7 @@ struct CompleteEarly: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var taskVM: TaskViewModel
     @ObservedObject var timerVM: TimerViewModel
-    @Binding var task: Task
+    @Binding var task: AppTask
     
     var body: some View {
         

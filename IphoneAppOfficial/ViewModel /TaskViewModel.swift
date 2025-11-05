@@ -13,10 +13,10 @@ class TaskViewModel: ObservableObject {
     
 //    @Published var newTask = Task(context: CoreDataManager.shared.container.viewContext)
     
-    @Published var savedTasks: [Task] = []
-    @Published var dailyTasks: [Task] = []
-    @Published var dateTasks: [Task] = []
-    @Published var goalTasks: [Task] = []
+    @Published var savedTasks: [AppTask] = []
+    @Published var dailyTasks: [AppTask] = []
+    @Published var dateTasks: [AppTask] = []
+    @Published var goalTasks: [AppTask] = []
     
     
     
@@ -29,7 +29,7 @@ class TaskViewModel: ObservableObject {
     
     func fetchTasks() {
         
-        let taskrequest = NSFetchRequest<Task>(entityName: "Task")
+        let taskrequest = NSFetchRequest<AppTask>(entityName: "AppTask")
         do {
             savedTasks = try container.viewContext.fetch(taskrequest)
             dailyTasks = getTasks(for: Date()) // <- Refresh dailyTasks here
@@ -42,7 +42,7 @@ class TaskViewModel: ObservableObject {
     
     func fetchTasksForDate(for date: Date) {
 
-        let request = NSFetchRequest<Task>(entityName: "Task")
+        let request = NSFetchRequest<AppTask>(entityName: "AppTask")
         
         // Calculate the start and end of the day
         let calendar = Calendar.current
@@ -64,7 +64,7 @@ class TaskViewModel: ObservableObject {
     }
 
     func fetchTasks(for goal: Goal) {
-        let request = NSFetchRequest<Task>(entityName: "Task")
+        let request = NSFetchRequest<AppTask>(entityName: "AppTask")
         
         // Predicate: fetch tasks where the goal relationship matches
         request.predicate = NSPredicate(format: "goal == %@", goal)
@@ -79,7 +79,7 @@ class TaskViewModel: ObservableObject {
     }
 
     func fetchTasks(goal: Goal, month: Date) {
-        let request = NSFetchRequest<Task>(entityName: "Task")
+        let request = NSFetchRequest<AppTask>(entityName: "AppTask")
         
         let calendar = Calendar.current
         guard let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: month)),
@@ -99,7 +99,7 @@ class TaskViewModel: ObservableObject {
     }
     
     func fetchTasks(month: Date) {
-        let request = NSFetchRequest<Task>(entityName: "Task")
+        let request = NSFetchRequest<AppTask>(entityName: "AppTask")
         
         let calendar = Calendar.current
         guard let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: month)),
@@ -121,12 +121,49 @@ class TaskViewModel: ObservableObject {
         } catch {
             print("Error fetching tasks: \(error)")
         }
+        
+    }
+    
+    func fetchTasks(week: Date) {
+        let request = NSFetchRequest<AppTask>(entityName: "AppTask")
+        
+        var calendar = Calendar.current
+        calendar.firstWeekday = 2 // 1 = Sunday, 2 = Monday
+        
+        // Find the Monday of the current week
+        guard let startOfWeek = calendar.dateInterval(of: .weekOfYear, for: week)?.start else {
+            return
+        }
+        
+        // Adjust startOfWeek if it’s not already Monday
+        let weekday = calendar.component(.weekday, from: startOfWeek)
+        let daysToSubtract = (weekday == 1) ? 6 : weekday - 2 // shift Sunday->Monday logic
+        guard let monday = calendar.date(byAdding: .day, value: -daysToSubtract, to: startOfWeek),
+              let nextMonday = calendar.date(byAdding: .weekOfYear, value: 1, to: monday) else {
+            return
+        }
+
+        // Filter tasks within that Monday–Sunday range
+        request.predicate = NSPredicate(
+            format: "dateDue >= %@ AND dateDue < %@",
+            monday as NSDate,
+            nextMonday as NSDate
+        )
+
+        do {
+            let tasksInWeek = try container.viewContext.fetch(request)
+            savedTasks = tasksInWeek
+            print("📅 Fetched \(tasksInWeek.count) tasks for week starting \(monday)")
+        } catch {
+            print("❌ Error fetching weekly tasks: \(error)")
+        }
     }
 
 
 
+
     
-    func getTasks(for date: Date) -> [Task] {
+    func getTasks(for date: Date) -> [AppTask] {
         let filtered = dateTasks.filter {
             if let taskDate = $0.dateDue {
                 return Calendar.current.isDate(taskDate, inSameDayAs: date)
@@ -141,7 +178,7 @@ class TaskViewModel: ObservableObject {
     
     func deleteAllTasks() {
         let context = container.viewContext // Ensure you use the same context
-        let fetchRequest: NSFetchRequest<NSFetchRequestResult> = Task.fetchRequest()
+        let fetchRequest: NSFetchRequest<NSFetchRequestResult> = AppTask.fetchRequest()
         let deleteRequest = NSBatchDeleteRequest(fetchRequest: fetchRequest)
 
         do {
@@ -153,7 +190,85 @@ class TaskViewModel: ObservableObject {
         }
     }
     
-    func completeTask(task: Task) {
+    func deleteAllTasksInApp() {
+        let context = container.viewContext
+        let fetchRequest: NSFetchRequest<NSFetchRequestResult> = AppTask.fetchRequest()
+        let deleteRequest = NSBatchDeleteRequest(fetchRequest: fetchRequest)
+        deleteRequest.resultType = .resultTypeObjectIDs // ensures NSManagedObjectContext merges properly
+
+        do {
+            let result = try context.execute(deleteRequest) as? NSBatchDeleteResult
+            if let objectIDs = result?.result as? [NSManagedObjectID] {
+                let changes: [AnyHashable: Any] = [
+                    NSDeletedObjectsKey: objectIDs
+                ]
+                // ✅ merge the deletions into the current context so SwiftUI updates
+                NSManagedObjectContext.mergeChanges(fromRemoteContextSave: changes, into: [context])
+            }
+            fetchTasks() // refresh your local list
+        } catch {
+            print("Error deleting tasks: \(error.localizedDescription)")
+        }
+    }
+
+    
+    func deleteAllTasksWithoutGoals() {
+        let context = container.viewContext
+        let fetchRequest: NSFetchRequest<AppTask> = AppTask.fetchRequest()
+        fetchRequest.predicate = NSPredicate(format: "goal == nil")
+        
+        do {
+            let tasks = try context.fetch(fetchRequest)
+            
+            // 1️⃣ Remove all pending notifications
+            for task in tasks {
+                if task.reminder == true {
+                    let id = task.objectID.uriRepresentation().absoluteString
+                    UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [id])
+                    print("Removed reminder for task: \(task.title ?? "no title")")
+                }
+            }
+            
+            // 2️⃣ Delete tasks from Core Data
+            for task in tasks {
+                context.delete(task)
+            }
+
+            // 3️⃣ Save once for efficiency
+            try context.save()
+            print("Deleted \(tasks.count) tasks without goals.")
+            
+            // 4️⃣ Refresh your data
+            fetchTasks()
+            
+        } catch {
+            print("Error deleting tasks without goals: \(error.localizedDescription)")
+        }
+    }
+
+    
+    func deleteMonthTasks(tasks: [AppTask], month: Date) {
+        
+        let context = container.viewContext
+        
+        for task in tasks {
+            turnOffRemindersNoSave(task: task)
+            context.delete(task)
+        }
+        
+        do {
+            try context.save()
+            fetchTasks() // refresh your view model’s list
+        } catch {
+            print("Error deleting tasks: \(error.localizedDescription)")
+        }
+        
+        fetchTasks(month: month) 
+    }
+
+
+    
+    func completeTask(task: AppTask) {
         if let goal = task.goal {
             goal.lastActive = Date()
             CoreDataManager.shared.saveContext()
@@ -183,9 +298,12 @@ class TaskViewModel: ObservableObject {
             CoreDataManager.shared.saveContext()
             checkGoalComplete(task: task)
         }
+        if task.reminder == true {
+            turnOffReminders(task: task)
+        }
     }
     
-    func completeTaskEarly(task: Task) {
+    func completeTaskEarly(task: AppTask) {
         if let timer = task.timer {
             timer.countdownNum = timer.elapsedTime
             timer.countdownTimer = 0
@@ -207,39 +325,68 @@ class TaskViewModel: ObservableObject {
            CoreDataManager.shared.saveContext()
             checkGoalComplete(task: task)
         }
+        if task.reminder == true {
+            turnOffReminders(task: task)
+        }
     }
     
-    func createTaskAndReturn (title: String, dueDate: Date?, dateOnly: Bool = false) -> Task {
-        let newTask = Task(context: container.viewContext)
+    func createTaskAndReturn (title: String, dueDate: Date?, dateOnly: Bool = false, reminders: Bool = false) -> AppTask {
+        let newTask = AppTask(context: container.viewContext)
         newTask.dateCreated = Date()
         newTask.title = title
         newTask.dateDue = dueDate
         newTask.dateOnly = dateOnly
         newTask.lastActive = Date()
+        newTask.reminder = reminders
+        
         CoreDataManager.shared.saveContext()
+        
+        if reminders == true {
+            scheduleReminder(task: newTask)
+        }
         return newTask
+        
+//        func addTaskToGoalTwo(goalr: Goal, title: String, dueDate: Date?, dateOnly: Bool = false) -> AppTask {
+//            let newTask = AppTask(context: goalr.managedObjectContext!)
+//            newTask.dateCreated = Date()
+//            newTask.title = title
+//            newTask.goal = goalr
+//            newTask.dateDue = dueDate
+//            newTask.dateOnly = dateOnly
+//            goalr.addToTask(newTask)
+//            newTask.lastActive = Date()
+//            goalr.isComplete = false
+//            CoreDataManager.shared.saveContext()
+//            fetchGoals()
+//            return newTask
+//          
+//        }
     }
     
-    func createTask(title: String, date: Date?, dateOnly: Bool = false) {
-        let newTask = Task(context: container.viewContext)
+    func createTask(title: String, date: Date?, dateOnly: Bool = false, reminders: Bool = false) {
+        let newTask = AppTask(context: container.viewContext)
         newTask.dateCreated = Date()
         newTask.dateDue = date
         newTask.title = title
         newTask.dateOnly = dateOnly
+        newTask.reminder = reminders
+    
         CoreDataManager.shared.saveContext()
-        
+        if reminders == true {
+            scheduleReminder(task: newTask)
+        }
     }
     
-    func addTimerToTask (task: Task) {
+    func addTimerToTask (task: AppTask) {
         let newTimer = TimerEntity(context: container.viewContext)
         task.timer = newTimer
         CoreDataManager.shared.saveContext()
     }
     
-    func addMultipleTimers(task: Task) {
+    func addMultipleTimers(task: AppTask) {
         guard let taskTitle = task.title else { return }
 
-        let fetchRequest: NSFetchRequest<Task> = Task.fetchRequest()
+        let fetchRequest: NSFetchRequest<AppTask> = AppTask.fetchRequest()
         fetchRequest.predicate = NSPredicate(format: "title == %@", taskTitle)
 
         do {
@@ -256,12 +403,12 @@ class TaskViewModel: ObservableObject {
         }
     }
     
-    func addMultipleCountdownTimers(task: Task, seconds: Double, minutes: Double, hours: Double) {
+    func addMultipleCountdownTimers(task: AppTask, seconds: Double, minutes: Double, hours: Double) {
         guard let taskTitle = task.title else { return }
 
         let totalSeconds = (hours * 60 * 60) + (minutes * 60) + seconds
 
-        let fetchRequest: NSFetchRequest<Task> = Task.fetchRequest()
+        let fetchRequest: NSFetchRequest<AppTask> = AppTask.fetchRequest()
         fetchRequest.predicate = NSPredicate(format: "title == %@", taskTitle)
 
         do {
@@ -296,9 +443,10 @@ class TaskViewModel: ObservableObject {
 //        }
 //    }
     
-    func repeatTask(task: Task, dates: [Date]) {
+    func repeatTask(task: AppTask, dates: [Date], reminders: Bool = false) {
+        var createdTasks: [AppTask] = []
         for date in dates {
-            let newTask = Task(context: container.viewContext)
+            let newTask = AppTask(context: container.viewContext)
             newTask.repeating = true
             newTask.title = task.title
             newTask.goal = task.goal
@@ -306,50 +454,107 @@ class TaskViewModel: ObservableObject {
             newTask.dateDue = date
             newTask.dateOnly = task.dateOnly
             newTask.lastActive = Date()
+            newTask.reminder = reminders
             newTask.seriesID = task.seriesID
+            createdTasks.append(newTask)
         }
         CoreDataManager.shared.saveContext()
         
+        for newTask in createdTasks where newTask.reminder {
+               scheduleReminderNoSave(task: newTask)
+           }
+        CoreDataManager.shared.saveContext()
         fetchTasks()
     }
 
 
-    func repeatingTrue (task: Task) {
+    func repeatingTrue (task: AppTask) {
         task.repeating = true
         task.seriesID = UUID()
         CoreDataManager.shared.saveContext()
     }
     
-    func deleteTask(_ task: Task) {
+    func deleteTask(_ task: AppTask) {
+        if task.reminder == true {
+            turnOffReminders(task: task)
+        }
         let context = task.managedObjectContext
         context?.delete(task) // Mark the goal for deletion
+       
         CoreDataManager.shared.saveContext()
         fetchTasks()
     }
     
-    func deleteTaskForDate(date: Date, task: Task) {
+    func deleteTaskForDate(date: Date, task: AppTask) {
+        if task.reminder == true {
+            turnOffReminders(task: task)
+        }
         let context = task.managedObjectContext
         context?.delete(task) // Mark the goal for deletion
+        
         CoreDataManager.shared.saveContext()
         fetchTasksForDate(for: date)
     }
     
-    func deleteTaskForGoal(goal: Goal, task: Task) {
+    func deleteTaskForGoal(goal: Goal, task: AppTask) {
+        if task.reminder == true {
+            turnOffReminders(task: task)
+        }
         let context = task.managedObjectContext
         context?.delete(task) // Mark the goal for deletion
+     
         CoreDataManager.shared.saveContext()
         fetchTasks(for: goal)
     }
     
     
-    func deleteRepeatingTasks(date: Date? = nil, goal: Goal? = nil, task: Task) {
+    func deleteRepeatingTasks(date: Date? = nil, goal: Goal? = nil, task: AppTask) {
         guard let context = task.managedObjectContext,
               let seriesID = task.seriesID else {
             return
         }
 
         // Fetch all tasks that share the same seriesID
-        let fetchRequest: NSFetchRequest<Task> = Task.fetchRequest()
+        let fetchRequest: NSFetchRequest<AppTask> = AppTask.fetchRequest()
+        fetchRequest.predicate = NSPredicate(format: "seriesID == %@", seriesID as CVarArg)
+
+        do {
+            let matchingTasks = try context.fetch(fetchRequest)
+            for t in matchingTasks {
+                if !t.isComplete {
+                    if t.reminder == true {
+                        let id = t.objectID.uriRepresentation().absoluteString
+                        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [id])
+                    }
+                    context.delete(t)
+                }
+              
+            }
+            CoreDataManager.shared.saveContext()
+        } catch {
+            print("Failed to fetch tasks for deletion: \(error)")
+        }
+        if let date = date {
+            fetchTasksForDate(for: date)
+            print("fetching tasks for date")
+        } else if let goal = goal {
+            fetchTasks(for: goal)
+            print("fetching tasks for goal")
+        }
+        else {
+            fetchTasks()
+            print("fetching all tasks ")
+        }
+    }
+
+    func deleteIncompleteRepeatingTasks(date: Date? = nil, goal: Goal? = nil, task: AppTask) {
+        guard let context = task.managedObjectContext,
+              let seriesID = task.seriesID else {
+            return
+        }
+
+        // Fetch all tasks that share the same seriesID
+        let fetchRequest: NSFetchRequest<AppTask> = AppTask.fetchRequest()
         fetchRequest.predicate = NSPredicate(format: "seriesID == %@", seriesID as CVarArg)
 
         do {
@@ -375,14 +580,18 @@ class TaskViewModel: ObservableObject {
             print("fetching all tasks ")
         }
     }
-
     
 
-    func deleteMultipleTasksInView(tasks: [Task], date: Date? = nil, goal: Goal? = nil) {
+    func deleteMultipleTasksInView(tasks: [AppTask], date: Date? = nil, goal: Goal? = nil) {
         guard let context = tasks.first?.managedObjectContext else { return }
 
         for task in tasks {
+            if task.reminder == true {
+                let id = task.objectID.uriRepresentation().absoluteString
+                UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [id])
+            }
             context.delete(task)
+           
         }
 
         CoreDataManager.shared.saveContext()
@@ -395,7 +604,7 @@ class TaskViewModel: ObservableObject {
         }
     }
     
-    func addQuantityVal( task: Task, qVal: Double ) {
+    func addQuantityVal( task: AppTask, qVal: Double ) {
 
         if task.quantityval == nil {
                let newQuantity = QuantityValue(context: container.viewContext)
@@ -412,10 +621,10 @@ class TaskViewModel: ObservableObject {
         print("Quantity for \(task.title ?? "task" ) is \(task.quantityval?.totalQuantity ?? 0)")
     }
     
-    func addMultipleQuantityVals(task: Task, qVal: Double) {
+    func addMultipleQuantityVals(task: AppTask, qVal: Double) {
         guard let taskTitle = task.title else { return }
 
-        let fetchRequest: NSFetchRequest<Task> = Task.fetchRequest()
+        let fetchRequest: NSFetchRequest<AppTask> = AppTask.fetchRequest()
         fetchRequest.predicate = NSPredicate(format: "title == %@", taskTitle)
 
         do {
@@ -445,7 +654,7 @@ class TaskViewModel: ObservableObject {
         }
     }
     
-    func updateTotalQuantityValue(task: Task, totalQuantity: Double) {
+    func updateTotalQuantityValue(task: AppTask, totalQuantity: Double) {
         task.quantityval?.totalQuantity = totalQuantity
         let current = task.quantityval?.currentQuantity ?? 0
         task.quantityval?.totalTimeEstimate = (task.quantityval?.totalQuantity ?? 0) * (task.quantityval?.timePerQuantityVal ?? 0)
@@ -455,7 +664,7 @@ class TaskViewModel: ObservableObject {
         print("total time estimate \(task.quantityval?.totalTimeEstimate ?? 0)")
     }
     
-    func getQuantityPercentage(task: Task) {
+    func getQuantityPercentage(task: AppTask) {
         let total = task.quantityval?.totalQuantity ?? 0
         let current = task.quantityval?.currentQuantity ?? 0
        // let timePer = task.quantityval?.timePerQuantityVal ?? 0
@@ -463,7 +672,7 @@ class TaskViewModel: ObservableObject {
         task.quantityval?.percentCompletion = min((current / total) * 100, 100)
     }
     
-    func incrementQuantityVal( task: Task, incVal: Double) {
+    func incrementQuantityVal( task: AppTask, incVal: Double) {
         if task.isComplete && incVal < task.quantityval?.totalQuantity ?? 0 {
             task.isComplete = false
         }
@@ -504,7 +713,7 @@ class TaskViewModel: ObservableObject {
         showQuantityValData(task: task)
         
         if let goal = task.goal {
-              let tasks = goal.task as? Set<Task> ?? []
+              let tasks = goal.task as? Set<AppTask> ?? []
               let allComplete = tasks.allSatisfy { $0.isComplete }
               
               if allComplete && !goal.isComplete {
@@ -524,7 +733,7 @@ class TaskViewModel: ObservableObject {
         CoreDataManager.shared.saveContext()
     }
     
-    func timeEstimatePerQuantity ( task: Task, hours: Double, minutes: Double, seconds: Double) {
+    func timeEstimatePerQuantity ( task: AppTask, hours: Double, minutes: Double, seconds: Double) {
         task.quantityval?.timePerQuantityVal = (hours * 60 * 60) + (minutes * 60) + seconds
         task.quantityval?.totalTimeEstimate = (task.quantityval?.totalQuantity ?? 0) * (task.quantityval?.timePerQuantityVal ?? 0)
         task.quantityval?.timeElapsed = (task.quantityval?.currentQuantity ?? 0) * (task.quantityval?.timePerQuantityVal ?? 0)
@@ -535,10 +744,10 @@ class TaskViewModel: ObservableObject {
 
     }
     
-    func timeEstimatePerQuantityMultiple(task: Task, hours: Double, minutes: Double, seconds: Double) {
+    func timeEstimatePerQuantityMultiple(task: AppTask, hours: Double, minutes: Double, seconds: Double) {
         guard let taskTitle = task.title else { return }
 
-        let fetchRequest: NSFetchRequest<Task> = Task.fetchRequest()
+        let fetchRequest: NSFetchRequest<AppTask> = AppTask.fetchRequest()
         fetchRequest.predicate = NSPredicate(format: "title == %@", taskTitle)
 
         do {
@@ -562,7 +771,7 @@ class TaskViewModel: ObservableObject {
         }
     }
     
-    func showQuantityValData ( task: Task ) {
+    func showQuantityValData ( task: AppTask ) {
 
         let total = task.quantityval?.totalQuantity ?? 0
         let current = task.quantityval?.currentQuantity ?? 0
@@ -578,7 +787,7 @@ class TaskViewModel: ObservableObject {
         CoreDataManager.shared.saveContext()
     }
     
-    func sortedTasks(goal: Goal, option: TaskSortOption) -> [Task] {
+    func sortedTasks(goal: Goal, option: TaskSortOption) -> [AppTask] {
         let tasks = goalTasks
         
         switch option {
@@ -612,7 +821,7 @@ class TaskViewModel: ObservableObject {
         }
     }
 
-    func sortedTasksAll(allTasks: [Task], option: TaskSortOption) -> [Task] {
+    func sortedTasksAll(allTasks: [AppTask], option: TaskSortOption) -> [AppTask] {
         let tasks = allTasks
         
         switch option {
@@ -645,7 +854,7 @@ class TaskViewModel: ObservableObject {
         }
     }
     
-    func sortedTasksDate(date: Date, option: TaskSortOption) -> [Task] {
+    func sortedTasksDate(date: Date, option: TaskSortOption) -> [AppTask] {
         let tasks = dateTasks
         
         switch option {
@@ -705,20 +914,22 @@ class TaskViewModel: ObservableObject {
         return result
     }
     
-    func lastActive(task: Task) {
+    func lastActive(task: AppTask) {
         task.lastActive = Date()
         CoreDataManager.shared.saveContext()
     }
     
-    func updateTaskTitle (task: Task, newTitle: String) {
+    func updateTaskTitle (task: AppTask, newTitle: String) {
         task.title = newTitle
         CoreDataManager.shared.saveContext()
     }
     
-    func addDateDueToTask( task: Task, date: Date) {
+    func addDateDueToTask( task: AppTask, date: Date) {
         task.dateDue = date
 
         CoreDataManager.shared.saveContext()
+        turnOffReminders(task: task)
+        scheduleReminder(task: task)
         print("\(task.dateDue ?? Date())")
     }
     
@@ -747,10 +958,10 @@ class TaskViewModel: ObservableObject {
             }
         }
     
-    func checkGoalComplete(task: Task) {
+    func checkGoalComplete(task: AppTask) {
         
         if let goal = task.goal {
-              let tasks = goal.task as? Set<Task> ?? []
+              let tasks = goal.task as? Set<AppTask> ?? []
               let allComplete = tasks.allSatisfy { $0.isComplete }
               
               if allComplete && !goal.isComplete {
@@ -769,7 +980,7 @@ class TaskViewModel: ObservableObject {
 
         // Safely cast to NSSet and convert to [Task]
         guard let taskSet = goal.task else { return }
-        let tasks = taskSet.compactMap { $0 as? Task }
+        let tasks = taskSet.compactMap { $0 as? AppTask }
 
         for task in tasks {
             if let timer = task.timer {
@@ -799,7 +1010,7 @@ class TaskViewModel: ObservableObject {
     }
     
     func countTasks() -> Int {
-        let request = NSFetchRequest<Task>(entityName: "Task")
+        let request = NSFetchRequest<AppTask>(entityName: "AppTask")
         
         do {
             let count = try container.viewContext.count(for: request)
@@ -809,5 +1020,167 @@ class TaskViewModel: ObservableObject {
             return 0
         }
     }
+   
+    func normalizedDate(from inputDate: Date?) -> Date {
+        let date = inputDate ?? Date()
+        var components = Calendar.current.dateComponents([.year, .month, .day], from: date)
+        components.hour = 12
+        components.minute = 0
+        return Calendar.current.date(from: components) ?? date
+    }
+    
+    func normalizedDateOnlyDate(from inputDate: Date?) -> Date {
+        let date = inputDate ?? Date()
+        var components = Calendar.current.dateComponents([.year, .month, .day], from: date)
+        components.hour = 23
+        components.minute = 59
+        return Calendar.current.date(from: components) ?? date
+    }
 
+    func returnPercentage(number: Int, total: Int) -> String {
+        guard total != 0 else { return "0%" } // avoid division by zero
+        
+        let percent = (Double(number) / Double(total)) * 100
+        let rounded = Int(round(percent))
+        
+        return "\(rounded)%"
+    }
+
+    func getWeekRange(for date: Date) -> String {
+        var calendar = Calendar.current
+        calendar.firstWeekday = 2 // Monday
+        
+        // Find week start (Monday) and end (Sunday)
+        guard let weekInterval = calendar.dateInterval(of: .weekOfYear, for: date) else {
+            return ""
+        }
+        
+        let weekday = calendar.component(.weekday, from: weekInterval.start)
+        let daysToSubtract = (weekday == 1) ? 6 : weekday - 2 // Shift to Monday
+        guard let monday = calendar.date(byAdding: .day, value: -daysToSubtract, to: weekInterval.start),
+              let sunday = calendar.date(byAdding: .day, value: 6, to: monday) else {
+            return ""
+        }
+        
+        // Format: "MM/dd"
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MM/dd"
+        
+        return "\(formatter.string(from: monday))  -  \(formatter.string(from: sunday))"
+    }
+    
+
+    func turnOffReminders(task: AppTask) {
+        task.reminder = false
+        let id = task.objectID.uriRepresentation().absoluteString
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [id])
+        CoreDataManager.shared.saveContext()
+    }
+    
+    func turnOffRemindersNoSave(task: AppTask) {
+        task.reminder = false
+        let id = task.objectID.uriRepresentation().absoluteString
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [id])
+//        CoreDataManager.shared.saveContext()
+    }
+    
+    func scheduleReminder(task: AppTask) {
+        task.reminder = true
+        let content = UNMutableNotificationContent()
+        content.title = "Reminder"
+        content.body = task.title ?? "\(task.title ?? "Task") due."
+        content.sound = .default
+
+        // Use the task’s dateDue as the trigger
+        guard let dueDate = task.dateDue else { return }
+        let triggerDate = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: dueDate)
+        let trigger = UNCalendarNotificationTrigger(dateMatching: triggerDate, repeats: false)
+
+        // Use a unique ID, like the task’s objectID
+        let request = UNNotificationRequest(identifier: task.objectID.uriRepresentation().absoluteString, content: content, trigger: trigger)
+        
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("Error scheduling notification: \(error)")
+            }
+        }
+        CoreDataManager.shared.saveContext()
+    }
+
+    func scheduleReminderNoSave(task: AppTask) {
+        task.reminder = true
+        let content = UNMutableNotificationContent()
+        content.title = "Reminder"
+        content.body = task.title ?? "\(task.title ?? "Task") due."
+        content.sound = .default
+
+        // Use the task’s dateDue as the trigger
+        guard let dueDate = task.dateDue else { return }
+        let triggerDate = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: dueDate)
+        let trigger = UNCalendarNotificationTrigger(dateMatching: triggerDate, repeats: false)
+
+        // Use a unique ID, like the task’s objectID
+        let request = UNNotificationRequest(identifier: task.objectID.uriRepresentation().absoluteString, content: content, trigger: trigger)
+        
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("Error scheduling notification: \(error)")
+            }
+        }
+
+    }
+
+    func scheduleRemindersForRepeatingTasks(task: AppTask) {
+        guard let context = task.managedObjectContext,
+              let seriesID = task.seriesID else {
+            return
+        }
+
+        // Fetch all tasks that share the same seriesID
+        let fetchRequest: NSFetchRequest<AppTask> = AppTask.fetchRequest()
+        fetchRequest.predicate = NSPredicate(format: "seriesID == %@", seriesID as CVarArg)
+
+        do {
+            let matchingTasks = try context.fetch(fetchRequest)
+            for t in matchingTasks {
+                if t.reminder == false {
+                  scheduleReminderNoSave(task: t)
+                    print("\(t.title ?? "no title") \(t.reminder)")
+                }
+            }
+            CoreDataManager.shared.saveContext()
+            print("Reminders: \(task.reminder)")
+        } catch {
+            print("Failed to fetch tasks for Reminders")
+        }
+       
+    }
+    
+    func cancelRemindersForRepeatingTasks(task: AppTask) {
+        guard let context = task.managedObjectContext,
+              let seriesID = task.seriesID else {
+            return
+        }
+
+        // Fetch all tasks that share the same seriesID
+        let fetchRequest: NSFetchRequest<AppTask> = AppTask.fetchRequest()
+        fetchRequest.predicate = NSPredicate(format: "seriesID == %@", seriesID as CVarArg)
+
+        do {
+            let matchingTasks = try context.fetch(fetchRequest)
+            for t in matchingTasks {
+                if t.reminder == true {
+                    let id = t.objectID.uriRepresentation().absoluteString
+                    UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [id])
+                    t.reminder = false
+                }
+                print("\(t.title ?? "no title") \(t.reminder)")
+            }
+            CoreDataManager.shared.saveContext()
+            print("Reminders: \(task.reminder)")
+        } catch {
+            print("Failed to fetch tasks for Reminders")
+        }
+       
+    }
 }

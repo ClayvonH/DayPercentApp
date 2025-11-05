@@ -16,9 +16,9 @@ struct QValTaskRectangularNavLink: View {
     
     @ObservedObject var timerVM: TimerViewModel
     
-    @ObservedObject var task: Task
+    @ObservedObject var task: AppTask
     
-    @Binding var selectedTask: Task?
+    @Binding var selectedTask: AppTask?
     @Binding var isShowingUpdateSheet: Bool
     
     @Binding var selectedSort: TaskSortOption
@@ -106,9 +106,9 @@ struct QValTaskRectangularNavLinkSmall: View {
     @ObservedObject var goalVM: GoalViewModel
     @ObservedObject var taskVM: TaskViewModel
     @ObservedObject var timerVM: TimerViewModel
-    @ObservedObject var task: Task
+    @ObservedObject var task: AppTask
     
-    @Binding var selectedTask: Task?
+    @Binding var selectedTask: AppTask?
     @Binding var isShowingUpdateSheet: Bool
     
     @Binding var selectedSort: TaskSortOption
@@ -180,7 +180,7 @@ struct QValTaskRectangularNavLinkSmall: View {
 
 struct QValCurrentQuantityView: View {
     @Environment(\.colorScheme) var colorScheme
-    @ObservedObject var task: Task
+    @ObservedObject var task: AppTask
     @ObservedObject var timerVM: TimerViewModel
     
 
@@ -201,7 +201,7 @@ struct QValCurrentQuantityView: View {
 
 struct QValCurrentQuantityViewSmall: View {
     @Environment(\.colorScheme) var colorScheme
-    @ObservedObject var task: Task
+    @ObservedObject var task: AppTask
     @ObservedObject var timerVM: TimerViewModel
     
 
@@ -221,7 +221,7 @@ struct QValCurrentQuantityViewSmall: View {
 
 struct QValTaskRemainingTimeView: View {
     @Environment(\.colorScheme) var colorScheme
-    @ObservedObject var task: Task
+    @ObservedObject var task: AppTask
     @ObservedObject var timerVM: TimerViewModel
     
 
@@ -241,7 +241,7 @@ struct QValTaskRemainingTimeView: View {
 
 struct QValTaskPercentView: View {
     @Environment(\.colorScheme) var colorScheme
-    @ObservedObject var task: Task
+    @ObservedObject var task: AppTask
     @ObservedObject var timerVM: TimerViewModel
     
 
@@ -260,7 +260,7 @@ struct QValTaskPercentView: View {
 
 struct QValTaskProgressBarView: View {
     
-    @ObservedObject var task: Task
+    @ObservedObject var task: AppTask
     @ObservedObject var timerVM: TimerViewModel
     
     
@@ -292,7 +292,7 @@ struct QValTaskProgressBarView: View {
 
 struct QValTaskProgressBarViewSmall: View {
     
-    @ObservedObject var task: Task
+    @ObservedObject var task: AppTask
     @ObservedObject var timerVM: TimerViewModel
     
     
@@ -321,10 +321,10 @@ struct QValTaskProgressBarViewSmall: View {
 
 
 struct UpdateTaskButtonView: View {
-    @ObservedObject var task: Task
+    @ObservedObject var task: AppTask
     @ObservedObject var timerVM: TimerViewModel
     @ObservedObject var taskVM: TaskViewModel
-    @Binding var selectedTaskForSheet: Task?
+    @Binding var selectedTaskForSheet: AppTask?
     @Binding var isShowingSheet: Bool
     @Binding var selectedSort: TaskSortOption
     var proxy: ScrollViewProxy

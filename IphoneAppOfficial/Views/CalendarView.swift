@@ -340,6 +340,7 @@ struct CalendarView: View {
 
     var body: some View {
         VStack {
+            
             monthNavigation
             monthPicker
             calendarGrid
@@ -349,6 +350,7 @@ struct CalendarView: View {
         .frame(maxHeight: .infinity, alignment: .top)
         .background(colorScheme == .dark ? .gray.opacity(0.15) : .white)
         .onAppear {
+            
             taskVM.fetchTasks(month: displayedMonth)
             goalVM.fetchGoals()
         }
@@ -385,6 +387,7 @@ struct CalendarView: View {
                     }
             }
         }
+        
     }
 
     private var calendarGrid: some View {
@@ -411,6 +414,7 @@ struct CalendarView: View {
                             Text("\(calendar.component(.day, from: date))")
                                 .foregroundColor(determineColor(for: date))
                                 .frame(width: 40, height: 60)
+                                .bold()
                                 .clipShape(Circle())
                         }
                     } else {
@@ -419,6 +423,9 @@ struct CalendarView: View {
                             .frame(width: 40, height: 40)
                     }
                 }
+            }
+            .onAppear {
+                updateDisplayedMonth()
             }
             .padding()
         }

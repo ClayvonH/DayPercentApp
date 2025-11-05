@@ -23,10 +23,19 @@ struct CreateGoalView: View {
         NavigationStack {
             VStack (alignment: .leading){
                 
-                Text("GOAL TITLE")
-                    .font(.title)
-                    .bold()
+                HStack {
+                    Text("Create Goal")
+                        .font(.largeTitle)
+                        .bold()
+                }
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.top)
+                .padding(.bottom, 20)
                 
+                    Text("GOAL TITLE")
+                        .font(.title)
+                        .bold()
+            
                 
                 TextField("Enter Goal Title", text: $goalTitle)
                     .padding(.leading)
@@ -92,10 +101,10 @@ struct CreateGoalView: View {
                 
             }
             .frame(maxWidth: .infinity, maxHeight: 600, alignment: .topLeading)
+            .padding(.horizontal)
             
-            .padding(.leading)
             
-            .navigationTitle("Create Goal")
+            
         }
         .alert("Must enter a goal title", isPresented: $showEmptyTitleAlert) {
             Button("OK", role: .cancel) {

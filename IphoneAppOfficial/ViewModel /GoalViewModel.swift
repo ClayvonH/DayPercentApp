@@ -112,7 +112,7 @@ class GoalViewModel: ObservableObject {
 
         // Safely cast to NSSet and convert to [Task]
         guard let taskSet = goal.task else { return }
-        let tasks = taskSet.compactMap { $0 as? Task }
+        let tasks = taskSet.compactMap { $0 as? AppTask }
 
         for task in tasks {
             if let timer = task.timer {
@@ -150,7 +150,7 @@ class GoalViewModel: ObservableObject {
 
         // Safely cast to NSSet and convert to [Task]
         guard let taskSet = goal.task else { return }
-        let tasks = taskSet.compactMap { $0 as? Task }
+        let tasks = taskSet.compactMap { $0 as? AppTask }
 
         // Only include tasks that fall inside this month
         let monthTasks = tasks.filter { task in
@@ -190,7 +190,7 @@ class GoalViewModel: ObservableObject {
         var overAllTime: Double = 0.0
         
 
-        if let tasks = goal.task as? Set<Task> {
+        if let tasks = goal.task as? Set<AppTask> {
             for task in tasks {
                 if let timer = task.timer {
                     totalElapsed += timer.elapsedTime
@@ -239,22 +239,35 @@ class GoalViewModel: ObservableObject {
         CoreDataManager.shared.saveContext()
     }
     
-    func addTaskToGoal (goalr: Goal, title: String) {
-        let newTask = Task(context: container.viewContext)
+    func removeGoalCount(goals: [Goal]) {
+        for goal in goals {
+            goal.taskCount = 0
+            CoreDataManager.shared.saveContext()
+        }
+        fetchGoals()
+    }
+    
+    func addTaskToGoal (goalr: Goal, title: String, reminders: Bool = false) {
+        let newTask = AppTask(context: container.viewContext)
         let newTimer = TimerEntity(context: container.viewContext)
         newTask.title = title
         newTask.goal = goalr
         newTask.timer = newTimer
         newTask.lastActive = Date()
+        newTask.reminder = reminders
         goalr.isComplete = false
         CoreDataManager.shared.saveContext()
+        
+        if reminders == true {
+            scheduleReminder(task: newTask)
+        }
         goalCount(goal: goalr)
         fetchGoals()
         
     }
     
-    func addTaskToGoalTwo(goalr: Goal, title: String, dueDate: Date?, dateOnly: Bool = false) -> Task {
-        let newTask = Task(context: goalr.managedObjectContext!)
+    func addTaskToGoalTwo(goalr: Goal, title: String, dueDate: Date?, dateOnly: Bool = false, reminders: Bool = false) -> AppTask {
+        let newTask = AppTask(context: goalr.managedObjectContext!)
         newTask.dateCreated = Date()
         newTask.title = title
         newTask.goal = goalr
@@ -262,8 +275,12 @@ class GoalViewModel: ObservableObject {
         newTask.dateOnly = dateOnly
         goalr.addToTask(newTask)
         newTask.lastActive = Date()
+        newTask.reminder = reminders
         goalr.isComplete = false
         CoreDataManager.shared.saveContext()
+        if reminders == true {
+            scheduleReminder(task: newTask)
+        }
         fetchGoals()
         return newTask
       
@@ -280,15 +297,61 @@ class GoalViewModel: ObservableObject {
         CoreDataManager.shared.saveContext()
     }
     
+    func completeGoalEarly(goal: Goal) {
+        
+        
+        if let tasks = goal.task?.allObjects as? [AppTask] {
+            for task in tasks {
+                if task.isComplete == false {
+                    if task.reminder == true {
+                        let id = task.objectID.uriRepresentation().absoluteString
+                        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [id])
+                    }
+                    self.deleteTask(task)
+                    print("Deleted \(task.title ?? "no title")")
+                    
+                }
+            }
+            }
+        goal.isComplete = true
+        goal.dateCompleted = Date()
+        CoreDataManager.shared.saveContext()
+        
+    }
     
+    func completeGoalAndFinishAllTasks(goal: Goal) {
+        
+        
+        if let tasks = goal.task?.allObjects as? [AppTask] {
+            for task in tasks {
+                if task.isComplete == false {
+                    if task.reminder == true {
+                        let id = task.objectID.uriRepresentation().absoluteString
+                        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [id])
+                    }
+                    
+                    
+                }
+            }
+            }
+        goal.isComplete = true
+        goal.dateCompleted = Date()
+        CoreDataManager.shared.saveContext()
+        
+    }
     
     func deleteGoal(_ goal: Goal) {
         
         
-        if let tasks = goal.task?.allObjects as? [Task] {
+        if let tasks = goal.task?.allObjects as? [AppTask] {
                 for task in tasks {
+                    if task.reminder == true {
+                        let id = task.objectID.uriRepresentation().absoluteString
+                        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [id])
+                    }
                     self.deleteTask(task)
                     print("Deleted \(task.title ?? "no title")")
+                  
                 }
             
             }
@@ -300,15 +363,88 @@ class GoalViewModel: ObservableObject {
         CoreDataManager.shared.saveContext()
     }
     
-    func deleteTask(_ task: Task) {
-        let context = task.managedObjectContext
-        context?.delete(task) // Mark the goal for deletion
+    func deleteGoalTasks(goal: Goal) {
         
+        
+        if let tasks = goal.task?.allObjects as? [AppTask] {
+            for task in tasks {
+                if task.reminder == true {
+                    let id = task.objectID.uriRepresentation().absoluteString
+                    UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [id])
+                }
+                self.deleteTask(task)
+        
+            }
+                
+        }
+        CoreDataManager.shared.saveContext()
+        print("deleted goal tasks")
+        fetchGoals()
+    }
+    
+    func deleteAllGoalsTasks(goals: [Goal]) {
+        let container = CoreDataManager.shared.container
+        let viewContext = container.viewContext
+
+        container.performBackgroundTask { backgroundContext in
+            for goal in goals {
+                // Bring goal into background context safely
+                guard let goalInContext = try? backgroundContext.existingObject(with: goal.objectID) as? Goal else { continue }
+
+                // Delete all related tasks
+                if let tasks = goalInContext.task as? Set<AppTask> {
+                    for task in tasks {
+                        if task.reminder == true {
+                            let id = task.objectID.uriRepresentation().absoluteString
+                            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [id])
+                        }
+                        backgroundContext.delete(task)
+                       
+                    }
+                }
+
+                // Reset goal stats
+                goalInContext.taskCount = 0
+                goalInContext.combinedElapsed = 0
+                goalInContext.overAllTimeCombined = 0
+                goalInContext.estimatedTimeRemaining = 0
+                goalInContext.percentComplete = 0
+            }
+
+            do {
+                try backgroundContext.save()
+
+                // Merge changes back to main context safely
+                DispatchQueue.main.async {
+                    do {
+                        try viewContext.save()
+                        self.fetchGoals()
+                    } catch {
+                        print("Failed to save view context: \(error)")
+                    }
+                }
+
+            } catch {
+                print("Error deleting tasks or saving goals: \(error.localizedDescription)")
+            }
+        }
+    }
+
+
+
+    func deleteTask(_ task: AppTask) {
+        let context = task.managedObjectContext
+        if task.reminder == true {
+            let id = task.objectID.uriRepresentation().absoluteString
+            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [id])
+        }
+        context?.delete(task) // Mark the goal for deletion
+       
         CoreDataManager.shared.saveContext()
     }
     
     func calculateGoalCompletionPercentage (goal: Goal ) {
-        guard let tasks = goal.task?.allObjects as? [Task], !tasks.isEmpty else {
+        guard let tasks = goal.task?.allObjects as? [AppTask], !tasks.isEmpty else {
                print("no tasks")
             return
            }
@@ -438,4 +574,66 @@ class GoalViewModel: ObservableObject {
            print("\(goal.title ?? "No title") - \(goal.lastActive ?? Date())")
         }
     }
+    func resetGoalInfo(goals: [Goal]) {
+        for goal in goals {
+            goal.taskCount = 0
+            goal.combinedElapsed = 0
+            goal.overAllTimeCombined = 0
+            goal.estimatedTimeRemaining = 0
+            goal.percentComplete = 0
+        }
+        CoreDataManager.shared.saveContext()
+        fetchGoals()
+    }
+    
+    func resetAllGoalsInfo() {
+        let request = NSFetchRequest<Goal>(entityName: "Goal")
+        do {
+            let allGoals = try container.viewContext.fetch(request)
+            for goal in allGoals {
+                goal.taskCount = 0
+                goal.combinedElapsed = 0
+                goal.overAllTimeCombined = 0
+                goal.estimatedTimeRemaining = 0
+                goal.percentComplete = 0
+            }
+            CoreDataManager.shared.saveContext()
+            fetchGoals()
+        } catch {
+            print("Error fetching goals for reset: \(error)")
+        }
+    }
+    
+    func turnOffReminders(task: AppTask) {
+        task.reminder = false
+        let id = task.objectID.uriRepresentation().absoluteString
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [id])
+        CoreDataManager.shared.saveContext()
+    }
+    
+    func scheduleReminder(task: AppTask) {
+        task.reminder = true
+        let content = UNMutableNotificationContent()
+        content.title = "Reminder"
+        content.body = task.title ?? "\(task.title ?? "Task") due."
+        content.sound = .default
+
+        // Use the task’s dateDue as the trigger
+        guard let dueDate = task.dateDue else { return }
+        let triggerDate = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: dueDate)
+        let trigger = UNCalendarNotificationTrigger(dateMatching: triggerDate, repeats: false)
+
+        // Use a unique ID, like the task’s objectID
+        let request = UNNotificationRequest(identifier: task.objectID.uriRepresentation().absoluteString, content: content, trigger: trigger)
+        
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("Error scheduling notification: \(error)")
+            }
+        }
+        CoreDataManager.shared.saveContext()
+    }
+    
+    
+
 }

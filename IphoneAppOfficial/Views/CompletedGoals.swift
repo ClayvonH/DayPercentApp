@@ -117,7 +117,7 @@ struct CompletedGoals: View {
                                                 
                                                 
                                                 
-                                                if let tasks = goal.task as? Set<Task> {
+                                                if let tasks = goal.task as? Set<AppTask> {
                                                     let completed = tasks.filter { $0.isComplete }.count
                                                     let total = tasks.count
                                                     

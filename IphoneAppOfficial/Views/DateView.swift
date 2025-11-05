@@ -17,18 +17,17 @@ struct DateView: View {
     @ObservedObject var timerVM: TimerViewModel
     @State private var isCompactView = false
     
-    @State private var selectedTaskForSheet: Task? = nil
+    @State private var selectedTaskForSheet: AppTask? = nil
     @State private var isShowingSheet = false
     
     @State private var isEditView = false
     @State private var showDeleteConfirmation = false
     @State private var showDeleteAllTasksConfirmation = false
-    @State private var taskToDelete: Task? = nil
+    @State private var taskToDelete: AppTask? = nil
     @State private var showDeleteForDayConfirmation = false
-    
+    @State private var selectedDate: Date? = nil
     
 
-    
 //    var dummyTask: Task
     
     @State private var showCreateTask = false
@@ -46,13 +45,13 @@ struct DateView: View {
     
     @State private var selectedSort: TaskSortOption = .title
     
-    var displayedTasks: [Task] {
+    var displayedTasks: [AppTask] {
 //        taskVM.sortedTasksAll(allTasks: taskVM.savedTasks, option: selectedSort)
         taskVM.sortedTasksDate(date: date, option: selectedSort)
     }
     
     
-    var sortedTasks: [Task] {
+    var sortedTasks: [AppTask] {
         taskVM.sortedTasksDate(date: date, option: selectedSort)
     }
     
@@ -90,7 +89,7 @@ struct DateView: View {
                         
                         HStack {
                             if goalVM.dateGoals.count == 0 {
-                                Text("Tasks For \(formatDate(date))")
+                                Text("Tasks  \(formatDate(date))")
                                     .font(.largeTitle)
                                     .bold()
                                     .padding(.leading)
@@ -184,7 +183,7 @@ struct DateView: View {
                 }
                 
                 .navigationDestination(isPresented: $showCreateTask) {
-                    CreateTaskView(taskVM: taskVM, goalVM: goalVM, timerVM: timerVM)
+                    CreateTaskView(date: date, taskVM: taskVM, goalVM: goalVM, timerVM: timerVM)
                 }
                 
                 VStack (spacing: 0) {

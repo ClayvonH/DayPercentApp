@@ -14,10 +14,11 @@ struct DailyTaskProgressFooter: View {
     var goal: Goal?
     var date: Date?
     var month: Date?
+    var week: Date?
     @ObservedObject var taskVM: TaskViewModel
     @ObservedObject var timerVM: TimerViewModel
     @ObservedObject var goalVM: GoalViewModel
-   var displayedTasks: [Task]
+   var displayedTasks: [AppTask]
     @Environment(\.colorScheme) var colorScheme
 
     var completedCount: Int {
@@ -43,29 +44,33 @@ struct DailyTaskProgressFooter: View {
                         .foregroundColor(.primary)
          
                     
-                    Text("Tasks Completed:  \(completedCount)/\(totalCount)")
+                    Text("Tasks Completed:  \(completedCount)/\(totalCount)    \(taskVM.returnPercentage(number: completedCount, total: totalCount))")
                         .bold()
                         .foregroundColor(.primary)
               
                 } else {
-                    Text("Tasks Completed:  \(completedCount)/\(totalCount)")
+                    Text("Tasks Completed:  \(completedCount)/\(totalCount)    \(taskVM.returnPercentage(number: completedCount, total: totalCount))")
                         .bold()
                         .foregroundColor(.primary)
                 }
                 HStack {
                     Spacer()
                     if let goal = goal {
-                        if goal.estimatedTimeRemaining > 0 {
+                        if goal.estimatedTimeRemaining > 0 && timerVM.dayTaskTimeRemaining > 0 {
                             if month != nil {
-                                Text("Time Remaining: \(timerVM.dayTaskTimeRemaining.asHoursMinutesSeconds())")
+                                if timerVM.dayTaskTimeRemaining > 0 {
+                                    Text("Time Remaining: \(timerVM.dayTaskTimeRemaining.asHoursMinutesSeconds())")
+                                            .bold()
+                                            .foregroundColor(colorScheme == .dark ? .white : .black)
+                                }
+                             
+                            } else {
+                                if goal.estimatedTimeRemaining > 0 {
+                                    Text("Time Remaining: \(goal.estimatedTimeRemaining.asHoursMinutesSeconds())")
                                         .bold()
                                         .foregroundColor(colorScheme == .dark ? .white : .black)
-                            } else {
-                                
-                                Text("Time Remaining: \(goal.estimatedTimeRemaining.asHoursMinutesSeconds())")
-                                    .bold()
-                                    .foregroundColor(colorScheme == .dark ? .white : .black)
-                                    .padding(.bottom, 5)
+                                        .padding(.bottom, 5)
+                                }
                             }
                         }
                     } else if (date == nil) {
@@ -77,12 +82,13 @@ struct DailyTaskProgressFooter: View {
                         }
                         Spacer()
                     } else if (date != nil ){
-                         
+                        if timerVM.dayTaskTimeRemaining > 0 {
                             Text("Time Remaining: \(timerVM.dayTaskTimeRemaining.asHoursMinutesSeconds())")
-                                    .bold()
-                                    .foregroundColor(colorScheme == .dark ? .white : .black)
+                                .bold()
+                                .foregroundColor(colorScheme == .dark ? .white : .black)
                             
-                        
+                            
+                        }
                     }
                     //                    if let tasks = goal.task as? Set<Task>, !tasks.isEmpty {
                     //                        ProgressView(value: goal.combinedElapsed, total: goal.overAllTimeCombined)
@@ -97,11 +103,11 @@ struct DailyTaskProgressFooter: View {
                     if let goal = goal {
                         
                         if month != nil {
-                            if timerVM.dayTotalTaskTime > 0 {
+                            if timerVM.dayTotalTaskTime > 0 && displayedTasks.count > 0 && timerVM.dayTaskTimeRemaining > 0 {
                                 
                                 
                                 ProgressView(value: timerVM.dayCombinedElapsedProgress, total: timerVM.dayTotalTaskTime)
-                                    .frame(width: 120, height: 20)
+                                    .frame(width: 100, height: 20)
                                 Text("\(Int(timerVM.dayTaskProgressPercent))%")
                                     .bold()
                                     .foregroundColor(colorScheme == .dark ? .white : .black)
@@ -113,7 +119,7 @@ struct DailyTaskProgressFooter: View {
                             
                             
                             ProgressView(value: goal.combinedElapsed, total: goal.overAllTimeCombined)
-                                .frame(width: 120, height: 20)
+                                .frame(width: 100, height: 20)
                             Text("\(Int(goal.percentComplete))%")
                                 .bold()
                                 .foregroundColor(colorScheme == .dark ? .white : .black)
@@ -125,7 +131,7 @@ struct DailyTaskProgressFooter: View {
                             
                             
                             ProgressView(value: timerVM.combinedElapsedProgress, total: timerVM.totalTaskTime)
-                                .frame(width: 120, height: 20)
+                                .frame(width: 100, height: 20)
                             Text("\(Int(timerVM.taskProgressPercent))%")
                                 .bold()
                                 .foregroundColor(colorScheme == .dark ? .white : .black)
@@ -134,14 +140,16 @@ struct DailyTaskProgressFooter: View {
                     } else {
                         if timerVM.dayCombinedElapsedProgress > 0 {
                             ProgressView(value: timerVM.dayCombinedElapsedProgress, total: timerVM.dayTotalTaskTime)
-                                .frame(width: 120, height: 20)
+                                .frame(width: 100, height: 20)
+                            
+                            
+                            Text("\(Int(timerVM.dayTaskProgressPercent))%")
+                                .bold()
+                                .foregroundColor(colorScheme == .dark ? .white : .black)
+                            Spacer()
+                        } else {
+                            Spacer()
                         }
-                        
-                        Text("\(Int(timerVM.dayTaskProgressPercent))%")
-                            .bold()
-                            .foregroundColor(colorScheme == .dark ? .white : .black)
-                        Spacer()
-                        
                     }
                 }
             }
@@ -162,6 +170,10 @@ struct DailyTaskProgressFooter: View {
                     } else {
                         
                         goalVM.GoalElapsedTime(goal: goal)
+                        timerVM.startSharedUITimerDate(date: Date(), tasks: displayedTasks)
+                        timerVM.beginProgressUpdatesDate(date: Date(), tasks: displayedTasks)
+                       
+                        
                     }
                 }
              
@@ -192,6 +204,8 @@ struct DailyTaskProgressFooter: View {
                         goalVM.GoalElapsedTime(goal: goal)
                     } else {
                         goalVM.GoalElapsedTime(goal: goal)
+                        timerVM.startSharedUITimerDate(date: Date(), tasks: displayedTasks)
+                        timerVM.beginProgressUpdatesDate(date: Date(), tasks: displayedTasks)
                     }
                 }
                 

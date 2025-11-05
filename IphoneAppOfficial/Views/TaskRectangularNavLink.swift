@@ -18,7 +18,7 @@ struct TaskRectangularNavLink: View {
     @ObservedObject var timerVM: TimerViewModel
     
     
-    @ObservedObject var task: Task
+    @ObservedObject var task: AppTask
     
     @Environment(\.colorScheme) var colorScheme
     
@@ -95,7 +95,7 @@ struct TaskRectangularNavLinkSmall: View {
     @ObservedObject var goalVM: GoalViewModel
     @ObservedObject var taskVM: TaskViewModel
     @ObservedObject var timerVM: TimerViewModel
-    @ObservedObject var task: Task
+    @ObservedObject var task: AppTask
     @Binding var selectedSort: TaskSortOption
     var proxy: ScrollViewProxy
     
@@ -154,7 +154,7 @@ struct TaskRectangularNavLinkSimple: View {
     
     @ObservedObject var timerVM: TimerViewModel
     
-    @ObservedObject var task: Task
+    @ObservedObject var task: AppTask
     
     @Environment(\.colorScheme) var colorScheme
     
@@ -222,7 +222,7 @@ struct TaskRectangularNavLinkSimpleSmall: View {
     
     @ObservedObject var timerVM: TimerViewModel
     
-    @ObservedObject var task: Task
+    @ObservedObject var task: AppTask
     
     @Environment(\.colorScheme) var colorScheme
     
@@ -274,7 +274,7 @@ struct TaskRectangularNavLinkSimpleSmall: View {
 
 struct TaskTitleView: View {
     @Environment(\.colorScheme) var colorScheme
-    @ObservedObject var task: Task
+    @ObservedObject var task: AppTask
 
     
     
@@ -289,7 +289,7 @@ struct TaskTitleView: View {
 
 struct TaskElapsedTimeView: View {
     @Environment(\.colorScheme) var colorScheme
-    @ObservedObject var task: Task
+    @ObservedObject var task: AppTask
     @ObservedObject var timerVM: TimerViewModel
     
 
@@ -310,7 +310,7 @@ struct TaskElapsedTimeView: View {
 
 struct TaskElapsedTimeViewSmall: View {
     @Environment(\.colorScheme) var colorScheme
-    @ObservedObject var task: Task
+    @ObservedObject var task: AppTask
     @ObservedObject var timerVM: TimerViewModel
     
 
@@ -331,7 +331,7 @@ struct TaskElapsedTimeViewSmall: View {
 
 struct TaskRemainingTimeView: View {
     @Environment(\.colorScheme) var colorScheme
-    @ObservedObject var task: Task
+    @ObservedObject var task: AppTask
     @ObservedObject var timerVM: TimerViewModel
     
 
@@ -339,16 +339,21 @@ struct TaskRemainingTimeView: View {
     
     
     var body: some View {
+        if let timer = task.timer {
             
-            Text("Remaining: \(timerVM.countDownView[task.objectID]?.asHoursMinutesSeconds() ?? "")")
-                     .foregroundColor(colorScheme == .dark ? .white : .black)
+            HStack {
+                Text("Remaining:")
+                    .foregroundColor(timer.isRunning ? Color.red : (colorScheme == .dark ? .white : .black))
+                Text("\(timerVM.countDownView[task.objectID]?.asHoursMinutesSeconds() ?? "")")
+                    .foregroundColor(colorScheme == .dark ? .white : .black)
+            }
         }
-    
+    }
 }
 
 struct TaskPercentView: View {
     @Environment(\.colorScheme) var colorScheme
-    @ObservedObject var task: Task
+    @ObservedObject var task: AppTask
     @ObservedObject var timerVM: TimerViewModel
     
 
@@ -367,7 +372,7 @@ struct TaskPercentView: View {
 
 struct TaskDateTimeView: View {
     @Environment(\.colorScheme) var colorScheme
-    @ObservedObject var task: Task
+    @ObservedObject var task: AppTask
     @ObservedObject var timerVM: TimerViewModel
     var goal: Goal?
     var showBoth: Bool? 
@@ -461,7 +466,7 @@ struct TaskDateTimeView: View {
 
 struct TaskProgressBarView: View {
     
-    @ObservedObject var task: Task
+    @ObservedObject var task: AppTask
     @ObservedObject var timerVM: TimerViewModel
     
     
@@ -496,7 +501,7 @@ struct TaskProgressBarView: View {
 struct TaskProgressBarViewSmall: View {
     
     @Environment(\.colorScheme) var colorScheme
-    @ObservedObject var task: Task
+    @ObservedObject var task: AppTask
     @ObservedObject var timerVM: TimerViewModel
     
     
@@ -523,7 +528,7 @@ struct TaskProgressBarViewSmall: View {
 
 
 struct StartTaskButtonView: View {
-    @ObservedObject var task: Task
+    @ObservedObject var task: AppTask
     @ObservedObject var timerVM: TimerViewModel
     @ObservedObject var taskVM: TaskViewModel
     @Binding var selectedSort: TaskSortOption
@@ -555,7 +560,7 @@ struct StartTaskButtonView: View {
                     .font(.subheadline.bold())
                     .padding(.horizontal, 14)
                     .padding(.vertical, 8)
-                    .background(Color.blue)
+                    .background(taskTimer.isRunning ? Color.red :Color.blue)
                     .foregroundColor(.white)
                     .clipShape(Capsule())
                     .shadow(radius: 2)
@@ -568,7 +573,7 @@ struct StartTaskButtonView: View {
 
 
 struct CompleteTaskButtonView: View {
-    @ObservedObject var task: Task
+    @ObservedObject var task: AppTask
     @ObservedObject var timerVM: TimerViewModel
     @ObservedObject var taskVM: TaskViewModel
 

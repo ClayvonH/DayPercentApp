@@ -18,19 +18,20 @@ struct GoalView: View {
     
     @State private var isCompactView = false
     
-    @State private var selectedTaskForSheet: Task? = nil
+    @State private var selectedTaskForSheet: AppTask? = nil
     @State private var isShowingSheet = false
     
     @State private var isEditView = false
     @State private var showDeleteConfirmation = false
     @State private var showDeleteAllTasksConfirmation = false
-    @State private var taskToDelete: Task? = nil
+    @State private var taskToDelete: AppTask? = nil
     @State private var editGoalTitle: String = ""
     @State private var editGoalTitleButton: Bool = false
     @State private var selectedDate: Date = Date()
     @State private var editDueDate: Bool = false
     @State private var editDate: Bool = false
     @State private var showDeleteForGoalConfirmation = false
+    @State private var showFinalDeleteForGoalConfirmation = false
     @State private var monthView: Bool = false
     
     @State private var currentMonth: Date = Date()
@@ -49,7 +50,7 @@ struct GoalView: View {
     
     @State private var selectedSort: TaskSortOption = .dueDate
     
-    var displayedTasks: [Task] {
+    var displayedTasks: [AppTask] {
         taskVM.sortedTasks(goal: goal, option: selectedSort)
     }
     
@@ -87,7 +88,7 @@ struct GoalView: View {
                     Button(action: {
                         showDeleteForGoalConfirmation.toggle()
                     }){
-                        Text("Delete All Tasks For Goal")
+                        Text("Delete Tasks")
                             .foregroundColor(.red)
                             .padding(.leading)
                     }
@@ -475,8 +476,41 @@ struct GoalView: View {
             .alert("Delete all tasks for this goal?  Tasks will be permanently deleted.", isPresented: $showDeleteForGoalConfirmation) {
                 
                 Button(action: {
-                    taskVM.deleteMultipleTasksInView(tasks: displayedTasks, goal: goal)
-                    isEditView = false 
+//                    taskVM.deleteMultipleTasksInView(tasks: displayedTasks, goal: goal)
+                 showFinalDeleteForGoalConfirmation = true
+                    showDeleteConfirmation = false
+                    
+                    
+                }, label: {
+                    Text("Delete All Tasks")
+                        .foregroundColor(.red)
+                })
+                if monthView == true {
+                    Button(action: {
+                        taskVM.deleteMonthTasks(tasks: displayedTasks, month: currentMonth)
+                        goalVM.goalCount(goal: goal)
+                        taskVM.fetchTasks(goal: goal, month: currentMonth)
+                        isEditView = false
+                        
+                    }, label: {
+                        Text("Delete Only Month Tasks")
+                            .foregroundColor(.red)
+                    })
+                }
+                
+                Button("Cancel", role: .cancel) {
+                    showDeleteForGoalConfirmation = false
+                    isEditView = false
+                }
+            }
+            .alert("Are you sure?  All tasks associated with \(goal.title ?? "no title goal") for every month will be permanently deleted.", isPresented: $showFinalDeleteForGoalConfirmation) {
+                
+                Button(action: {
+//                    taskVM.deleteMultipleTasksInView(tasks: displayedTasks, goal: goal)
+                    goalVM.deleteGoalTasks(goal: goal)
+                    goalVM.goalCount(goal: goal)
+                    taskVM.fetchTasks(for: goal)
+                    isEditView = false
                     
                 }, label: {
                     Text("Delete All Tasks")

@@ -9,16 +9,20 @@ struct TasksView: View {
     @ObservedObject var timerVM: TimerViewModel
     @State private var isCompactView = false
     
-    @State private var selectedTaskForSheet: Task? = nil
+    @State private var selectedTaskForSheet: AppTask? = nil
     @State private var isShowingSheet = false
     
     @State private var isEditView = false
     @State private var showDeleteConfirmation = false
     @State private var showDeleteAllTasksConfirmation = false
-    @State private var taskToDelete: Task? = nil
+    @State private var taskToDelete: AppTask? = nil
     @State private var currentMonth: Date = Date()
+    @State private var currentWeek: Date = Date()
     @State private var monthView: Bool = false
+    @State private var weekView: Bool = false
     @State private var showMonthViewAlert: Bool = false
+    @State private var showDeleteAllTasksAlert: Bool = false
+    @State private var showDeleteAllTasksMonthAlert: Bool = false
     //    var dummyTask: Task
     
     @State private var showCreateTask = false
@@ -38,12 +42,12 @@ struct TasksView: View {
     
     @State private var showBoth = true
     
-    var displayedTasks: [Task] {
+    var displayedTasks: [AppTask] {
         taskVM.sortedTasksAll(allTasks: taskVM.savedTasks, option: selectedSort)
     }
     
     
-    var sortedTasks: [Task] {
+    var sortedTasks: [AppTask] {
         taskVM.sortedTasksAll(allTasks: taskVM.savedTasks, option: selectedSort)
     }
     
@@ -60,9 +64,21 @@ struct TasksView: View {
         
         VStack {
             if isEditView {
-                Button(action: {taskVM.deleteAllTasks()}, label: {
-                    Text("delete all tasks")
-                        .foregroundColor(.red)
+                Button(action: {
+                    if monthView == false {
+                        showDeleteAllTasksAlert = true
+                    } else {
+                        showDeleteAllTasksMonthAlert = true
+                    }
+                    
+                }, label: {
+                    if monthView == false {
+                        Text("Delete All Tasks")
+                            .foregroundColor(.red)
+                    } else {
+                        Text("Delete Month Tasks")
+                            .foregroundColor(.red)
+                    }
                 })
             }
             ScrollViewReader { proxy in
@@ -71,30 +87,90 @@ struct TasksView: View {
                 ScrollView (){
                     
                     HStack {
-                        Text("All Tasks")
-                            .font(.largeTitle)
-                            .bold()
-                            .padding(.leading)
-                            .id("top")
+                        if monthView == true {
+                            Text("Month Tasks")
+                                .font(.title)
+                                .bold()
+                                .padding(.leading)
+                                .id("top")
+                        } else if weekView == true {
+                            VStack {
+                                Text("Week Tasks")
+                                    .font(.title)
+                                    .bold()
+                                    .padding(.leading)
+                                    .id("top")
+                                Text("\(taskVM.getWeekRange(for: currentWeek))")
+                                    .font(.title2)
+                                    .bold()
+                            }
+                        } else {
+                            Text("All Tasks")
+                                .font(.title)
+                                .bold()
+                                .padding(.leading)
+                                .id("top")
+                        }
                         
                         Button(action: {
-                            if taskVM.countTasks() <= 500 {
-                                monthView.toggle()
-                                if monthView == true {
-                                    taskVM.fetchTasks(month: currentMonth)
-                                } else {
-                                    taskVM.fetchTasks()
-                                }
-                                
+                            if (weekView == false && monthView == false) || (weekView == true && monthView == false) {
+                                weekView = false
+                                monthView = true
+                                taskVM.fetchTasks(month: currentMonth)
                             } else {
-                                showMonthViewAlert.toggle()
+                                if taskVM.countTasks() <= 500 {
+                                        monthView = false
+                                        taskVM.fetchTasks()
+   
+                                } else {
+                                    showMonthViewAlert.toggle()
+                                }
                             }
+                            
                        }){
                            if monthView == true {
-                               Text("Display All Tasks")
+                               VStack {
+                                   Text("All")
+                                   Text("Tasks")
+                               }
                            } else {
-                               Text("Monthly Tasks")
+                               VStack {
+                                   Text("Monthly")
+                                   Text("Tasks")
+                               }
                            }
+                       }
+                       .padding(.leading)
+                        
+                        Button(action: {
+                            if (weekView == false && monthView == false) || (weekView == false && monthView == true) {
+                                monthView = false
+                                weekView = true
+                                taskVM.fetchTasks(week: currentWeek)
+                            } else {
+                                if taskVM.countTasks() <= 500 {
+                                        weekView = false
+                                        taskVM.fetchTasks()
+   
+                                } else {
+                                    showMonthViewAlert.toggle()
+                                }
+                            }
+                         
+                            }
+                       ){
+                            if weekView == true {
+                                VStack {
+                                    Text("All")
+                                    Text("Tasks")
+                                }
+                            } else {
+                                VStack {
+                                    Text("Weekly")
+                                    Text("Tasks")
+                                }
+                            }
+                           
                        }
                        .padding(.leading)
                         
@@ -111,8 +187,7 @@ struct TasksView: View {
                             .bold()
                             .padding(.top, 250)
                     }
-                    
-                    
+                  
                     LazyVStack (spacing: 5){
                         
                         
@@ -202,10 +277,27 @@ struct TasksView: View {
                         Spacer()
                         
                         Button(action: {
+                            
                             // Go to previous month
                             if let previousMonth = Calendar.current.date(byAdding: .month, value: -1, to: currentMonth) {
                                 currentMonth = previousMonth
                                 taskVM.fetchTasks(month: currentMonth)
+                                timerVM.setAllTimerVals()
+                                
+                            }
+                        }) {
+                            Image(systemName: "chevron.left")
+                            
+                        }
+                    } else if weekView == true {
+                        Spacer()
+                        
+                        Button(action: {
+                            
+                            // Go to previous month
+                            if let previousWeek = Calendar.current.date(byAdding: .weekOfYear, value: -1, to: currentWeek) {
+                                currentWeek = previousWeek
+                                taskVM.fetchTasks(week: currentWeek)
                                 timerVM.setAllTimerVals()
                                 
                             }
@@ -251,6 +343,22 @@ struct TasksView: View {
                         }) {
                             Image(systemName: "chevron.right")
                         }
+                    } else if weekView == true {
+                        Spacer()
+                        
+                        Button(action: {
+                            
+                            // Go to previous month
+                            if let nextWeek = Calendar.current.date(byAdding: .weekOfYear, value: 1, to: currentWeek) {
+                                currentWeek = nextWeek
+                                taskVM.fetchTasks(week: currentWeek)
+                                timerVM.setAllTimerVals()
+                                
+                            }
+                        }) {
+                            Image(systemName: "chevron.right")
+                            
+                        }
                     }
                     Spacer()
                     Button(action: {
@@ -292,7 +400,47 @@ struct TasksView: View {
         .alert("Cannot display more than 500 tasks.  You have \(taskVM.countTasks()) tasks", isPresented: $showMonthViewAlert) {
 
         }
- 
+        .alert("This will delete all tasks for this month.", isPresented: $showDeleteAllTasksMonthAlert) {
+            
+            Button(action: {
+                taskVM.deleteMonthTasks(tasks: taskVM.savedTasks, month: currentMonth)
+                isEditView = false
+                
+            }, label: {
+                Text("Delete Month Tasks")
+                    .foregroundColor(.red)
+            })
+            
+            Button(action: {
+                taskVM.deleteAllTasksWithoutGoals()
+                isEditView = false
+                
+            }, label: {
+                Text("Delete All Non Goal Tasks")
+                    .foregroundColor(.red)
+            })
+            
+            Button("Cancel", role: .cancel) {
+                showDeleteAllTasksAlert = false
+                isEditView = false
+            }
+        }
+        .alert("This will delete all tasks stored in app.  Tasks will be permanently deleted.", isPresented: $showDeleteAllTasksAlert) {
+            
+            Button(action: {
+                taskVM.deleteMonthTasks(tasks: taskVM.savedTasks, month: currentMonth)
+                isEditView = false
+                
+            }, label: {
+                Text("Delete All Tasks")
+                    .foregroundColor(.red)
+            })
+            
+            Button("Cancel", role: .cancel) {
+                showDeleteAllTasksAlert = false
+                isEditView = false
+            }
+        }
     }
 
        

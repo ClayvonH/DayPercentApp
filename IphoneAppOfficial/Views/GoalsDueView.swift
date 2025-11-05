@@ -104,7 +104,7 @@ struct GoalsDueView: View {
                                                     
                                                     
                                                     
-                                                    if let tasks = goal.task as? Set<Task> {
+                                                    if let tasks = goal.task as? Set<AppTask> {
                                                         let completed = tasks.filter { $0.isComplete }.count
                                                         let total = tasks.count
                                                         
@@ -133,7 +133,7 @@ struct GoalsDueView: View {
                                                         Text(" \(goal.estimatedTimeRemaining.asHoursMinutesSecondsWithLabels())")
                                                         
                                                         
-                                                        if let tasks = goal.task as? Set<Task>, !tasks.isEmpty && goal.overAllTimeCombined > 0 {
+                                                        if let tasks = goal.task as? Set<AppTask>, !tasks.isEmpty && goal.overAllTimeCombined > 0 {
                                                             ProgressView(value: goal.combinedElapsed, total: goal.overAllTimeCombined)
                                                                 .frame(width: 50, height: 10)
                                                                 .tint(Color.accentColor)

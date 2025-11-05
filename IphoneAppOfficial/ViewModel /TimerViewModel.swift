@@ -64,7 +64,7 @@ class TimerViewModel: ObservableObject {
             }
     }
     
-    func startSharedUITimerDate(date: Date, tasks: [Task]) {
+    func startSharedUITimerDate(date: Date, tasks: [AppTask]) {
         sharedUITimer?.cancel()  // Stop existing one if any
 
         sharedUITimer = Timer.publish(every: 0.5, on: .main, in: .common)
@@ -75,7 +75,7 @@ class TimerViewModel: ObservableObject {
     }
     
     
-    func setAllTimerVals(date: Date? = nil, tasks: [Task]? = nil, goal: Goal? = nil, goalTasks: [Task]? = nil) {
+    func setAllTimerVals(date: Date? = nil, tasks: [AppTask]? = nil, goal: Goal? = nil, goalTasks: [AppTask]? = nil) {
         
         if goal !=  nil {
             if let tasks = goalTasks {
@@ -119,7 +119,7 @@ class TimerViewModel: ObservableObject {
 
     
 
-    func updateAllRunningTaskTimers(date: Date? = nil, tasks: [Task]? = nil, goal: Goal? = nil, goalTasks: [Task]? = nil) {
+    func updateAllRunningTaskTimers(date: Date? = nil, tasks: [AppTask]? = nil, goal: Goal? = nil, goalTasks: [AppTask]? = nil) {
         
         if goal != nil {
             let currentTime = Date()
@@ -310,7 +310,7 @@ class TimerViewModel: ObservableObject {
         }
     }
     
-    func ElapsedTimeForTasks(allTasks: [Task]) -> (combinedElapsed: Double, overAllTime: Double, percentComplete: Double, estimatedTimeRemaining: Double) {
+    func ElapsedTimeForTasks(allTasks: [AppTask]) -> (combinedElapsed: Double, overAllTime: Double, percentComplete: Double, estimatedTimeRemaining: Double) {
         var totalElapsed: Double = 0.0
         var overAllTime: Double = 0.0
         
@@ -340,7 +340,7 @@ class TimerViewModel: ObservableObject {
         return (totalElapsed, overAllTime, percent, remaining)
     }
     
-    func beginProgressUpdates(for date: Date, tasks: [Task]? = nil, goalTasks: [Task]? = nil) {
+    func beginProgressUpdates(for date: Date, tasks: [AppTask]? = nil, goalTasks: [AppTask]? = nil) {
         progressUpdateTimer?.cancel()
 
         progressUpdateTimer = Timer.publish(every: 1, on: .main, in: .common)
@@ -397,7 +397,7 @@ class TimerViewModel: ObservableObject {
           progressUpdateTimer = nil
       }
     
-    func beginProgressUpdatesDate(date: Date, tasks: [Task]) {
+    func beginProgressUpdatesDate(date: Date, tasks: [AppTask]) {
         progressUpdateTimer?.cancel()
 
         progressUpdateTimer = Timer.publish(every: 0.5, on: .main, in: .common)
@@ -428,7 +428,7 @@ class TimerViewModel: ObservableObject {
     
     
     
-    func updateCombinedTimers(date: Date? = nil, tasks: [Task]? = nil) {
+    func updateCombinedTimers(date: Date? = nil, tasks: [AppTask]? = nil) {
         
         if date != nil {
             if let tasks = tasks {
@@ -482,7 +482,7 @@ class TimerViewModel: ObservableObject {
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
         
-        let request: NSFetchRequest<Task> = Task.fetchRequest()
+        let request: NSFetchRequest<AppTask> = AppTask.fetchRequest()
         request.predicate = NSPredicate(format: "dueDate >= %@ AND dueDate < %@", startOfDay as NSDate, endOfDay as NSDate)
         
         do {
@@ -500,7 +500,7 @@ class TimerViewModel: ObservableObject {
 
 
     
-    func resumeTimer (task: Task) {
+    func resumeTimer (task: AppTask) {
         guard let timerData = task.timer else { return }
         
         if timerData.isRunning == true {
@@ -564,7 +564,7 @@ class TimerViewModel: ObservableObject {
         
     
     
-    func startUITimer(task: Task) {
+    func startUITimer(task: AppTask) {
         
         guard let timerData = task.timer else {
             print("no timer data")
@@ -595,7 +595,7 @@ class TimerViewModel: ObservableObject {
         // No need to set up a timer here anymore
     }
 
-    func startTimer(_ task: Task) {
+    func startTimer(_ task: AppTask) {
         task.lastActive = Date()
         if let goal = task.goal {
             goal.lastActive = Date()
@@ -670,7 +670,7 @@ class TimerViewModel: ObservableObject {
         }
     }
     
-    func stopTimer(_ task: Task) {
+    func stopTimer(_ task: AppTask) {
         
         print(task.timer?.elapsedTime ?? "no time")
         
@@ -715,7 +715,7 @@ class TimerViewModel: ObservableObject {
     }
     
     
-    func updateElapsedTime(task: Task, seconds: Double, minutes: Double, hours: Double) {
+    func updateElapsedTime(task: AppTask, seconds: Double, minutes: Double, hours: Double) {
         let currentTime = Date()
         
         let newElapsedTime = (hours * 60 * 60) + (minutes * 60) + seconds
@@ -775,7 +775,7 @@ class TimerViewModel: ObservableObject {
         print("SD\(task.timer?.startDate ?? Date())")
     }
 
-    func updateCountDownTimer (task: Task, seconds: Double, minutes: Double, hours: Double) {
+    func updateCountDownTimer (task: AppTask, seconds: Double, minutes: Double, hours: Double) {
         
         task.timer?.countdownNum = (hours * 60 * 60) + (minutes * 60) + seconds
         
@@ -799,7 +799,7 @@ class TimerViewModel: ObservableObject {
  
     }
     
-    func countDownTimer( task: Task, seconds: Double, minutes: Double, hours: Double) {
+    func countDownTimer( task: AppTask, seconds: Double, minutes: Double, hours: Double) {
 
         task.timer?.countdownTimer += (hours * 60 * 60) + (minutes * 60) + seconds
         task.timer?.countdownNum += (hours * 60 * 60) + (minutes * 60) + seconds
@@ -810,18 +810,18 @@ class TimerViewModel: ObservableObject {
         print(task.timer?.cdTimerEndDate ?? "no date")
     }
     
-    func toggleTimerOn (task: Task) {
+    func toggleTimerOn (task: AppTask) {
         task.timer?.timerManualToggled = true
         CoreDataManager.shared.saveContext()
     }
     
     
-    func toggleTimerOff (task: Task) {
+    func toggleTimerOff (task: AppTask) {
         task.timer?.timerManualToggled = false
         CoreDataManager.shared.saveContext()
     }
     
-    func scheduleTaskCompletionNotification(for task: Task) {
+    func scheduleTaskCompletionNotification(for task: AppTask) {
         guard let timerData = task.timer else { return }
 
         let timeRemaining = timerData.cdTimerEndDate?.timeIntervalSinceNow ?? 0
@@ -866,10 +866,10 @@ class TimerViewModel: ObservableObject {
             }
         }
     
-    func checkGoalComplete(task: Task) {
+    func checkGoalComplete(task: AppTask) {
         
         if let goal = task.goal {
-              let tasks = goal.task as? Set<Task> ?? []
+              let tasks = goal.task as? Set<AppTask> ?? []
               let allComplete = tasks.allSatisfy { $0.isComplete }
               
               if allComplete && !goal.isComplete {

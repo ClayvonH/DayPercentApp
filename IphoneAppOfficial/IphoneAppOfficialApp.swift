@@ -8,23 +8,28 @@ import SwiftUI
 
 @main
 struct IphoneAppOfficialApp: App {
-    let persistenceController = PersistenceController.shared
+    let persistenceController = CoreDataManager.shared
     
     @StateObject private var taskVM: TaskViewModel
     @StateObject private var goalVM: GoalViewModel
     @StateObject private var timerVM: TimerViewModel
+    @StateObject private var storeVM: StoreViewModel
+
     
     // store user preference (system by default)
     @AppStorage("appearance") private var appearance: Appearance = .system
 
     init() {
+        
         let taskVM = TaskViewModel()
         let goalVM = GoalViewModel()
         let timerVM = TimerViewModel(taskViewModel: taskVM, goalViewModel: goalVM)
+        let storeVM = StoreViewModel()
         
         _taskVM = StateObject(wrappedValue: taskVM)
         _goalVM = StateObject(wrappedValue: goalVM)
         _timerVM = StateObject(wrappedValue: timerVM)
+        _storeVM = StateObject(wrappedValue: storeVM)
         
         NotificationManager.shared.requestAuthorization()
     }
@@ -34,7 +39,8 @@ struct IphoneAppOfficialApp: App {
             DailyTasksView(
                 taskVM: taskVM,
                 goalVM: goalVM,
-                timerVM: timerVM
+                timerVM: timerVM,
+                storeVM: storeVM
             )
             .environment(\.managedObjectContext, persistenceController.container.viewContext)
             .preferredColorScheme(appearance.colorScheme) // 👈 apply theme

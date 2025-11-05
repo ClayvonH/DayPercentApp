@@ -11,9 +11,9 @@ struct EditTaskView: View {
     @Environment(\.colorScheme) var colorScheme
     @State var date: Date?
     @State var goal: Goal?
-    @ObservedObject var task: Task
+    @ObservedObject var task: AppTask
     @Binding var isEditView: Bool
-    @Binding var taskToDelete: Task?
+    @Binding var taskToDelete: AppTask?
     @Binding var showDeleteConfirmation: Bool
     @Binding var selectedSort: TaskSortOption
     //    @Binding var displayedTasks: [Task]

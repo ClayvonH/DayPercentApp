@@ -14,7 +14,7 @@ struct TaskView: View {
     @ObservedObject var taskVM: TaskViewModel
     @ObservedObject var timerVM: TimerViewModel
 
-    @State var task: Task
+    @State var task: AppTask
     @Environment(\.managedObjectContext) private var context
     
     @Environment(\.colorScheme) var colorScheme
@@ -53,8 +53,9 @@ struct TaskView: View {
     
     @State private var showEmptyTitleAlert = false
     @State private var showLowQvalTotalAlert = false
-    
-    @State private var showBoth = true 
+    @State private var showRemindersAlert = false
+    @State private var showRemindersOffAlert = false
+    @State private var showBoth = true
     
     func toggle(_ day: Weekday) {
         if selectedWeekdays.contains(day) {
@@ -290,11 +291,84 @@ struct TaskView: View {
                         }
                     }
                     }
+//                    HStack {
+//                        Text("Created:")
+//                            .font(.title2).bold()
+//                        Text(task.dateCreated?.formatted(.dateTime.month().day().year()) ?? "N/A")
+//                            .font(.title2)
+//                    }
                     HStack {
-                        Text("Created:")
+                        Text("Reminders:")
                             .font(.title2).bold()
-                        Text(task.dateCreated?.formatted(.dateTime.month().day().year()) ?? "N/A")
-                            .font(.title2)
+                        
+                        
+                        Button(action: {
+                            if task.reminder == false {
+                                showRemindersOffAlert = false
+                                showRemindersAlert = true
+                            } else {
+                                showRemindersAlert = false
+                                showRemindersOffAlert = true
+                            }
+                        }) {
+                            if task.reminder == true {
+                                Text("ON")
+                                    .font(.title2)
+                                    .padding(.trailing, 10)
+                            } else {
+                                Text("OFF")
+                                    .font(.title2)
+                                    .padding(.trailing, 10)
+                            }
+                        }
+                        
+                        
+                    }
+                    .alert("Turn On Reminder for \(task.title ?? "no title")?", isPresented: $showRemindersAlert) {
+                        Button(action: {
+                            taskVM.scheduleReminder(task: task)
+                            
+                            
+                        }, label: {
+                            Text("Turn On Reminder")
+                                .foregroundColor(.red)
+                        })
+                        
+                        if task.repeating == true {
+                            Button(action: {
+                                taskVM.scheduleRemindersForRepeatingTasks(task: task)
+                                
+                                
+                            }, label: {
+                                Text("Turn On Reminders for all tasks: \(task.title ?? "no title")")
+                                    .foregroundColor(.red)
+                            })
+                        }
+                        
+                        Button("Cancel", role: .cancel) { }
+                    }
+                    .alert("Turn Off Reminder for \(task.title ?? "no title")?", isPresented: $showRemindersOffAlert) {
+                        Button(action: {
+                            taskVM.turnOffReminders(task: task)
+                            
+                            
+                        }, label: {
+                            Text("Turn Off Reminder")
+                                .foregroundColor(.red)
+                        })
+                        
+                        if task.repeating == true {
+                            Button(action: {
+                                taskVM.cancelRemindersForRepeatingTasks(task: task)
+                                
+                                
+                            }, label: {
+                                Text("Turn Off Reminders for all tasks: \(task.title ?? "no title")")
+                                    .foregroundColor(.red)
+                            })
+                        }
+                        
+                        Button("Cancel", role: .cancel) { }
                     }
                     
                     if task.timer == nil && task.quantityval == nil {
@@ -318,6 +392,7 @@ struct TaskView: View {
                         HStack {
                             Text("Elapsed Time:")
                                 .font(.title2).bold()
+                                .foregroundColor(timer.isRunning ? Color.red : (colorScheme == .dark ? .white : .black))
                             Text(timer.elapsedTime.asHoursMinutesSeconds())
                                 .font(.title2)
                             //                                .foregroundColor(
@@ -496,10 +571,18 @@ struct TaskView: View {
                         }
                         }
                         HStack {
-                            Text("Time Remaining:")
-                                .font(.title2).bold()
-                            Text(timer.countdownTimer.asHoursMinutesSeconds())
-                                .font(.title2)
+                            if timer.countdownTimer > 0 {
+                                Text("Time Remaining:")
+                                    .font(.title2).bold()
+                                    .foregroundColor(timer.isRunning ? Color.red : (colorScheme == .dark ? .white : .black))
+                                Text(timer.countdownTimer.asHoursMinutesSeconds())
+                                    .font(.title2)
+                            } else {
+                                Text("Time Remaining:")
+                                    .font(.title2).bold()
+                                Text("0:00")
+                                    .font(.title2)
+                            }
                         }
                         
                         
@@ -540,11 +623,11 @@ struct TaskView: View {
                                     Text(timer.isRunning ? "Stop Task" : "Start Task")
                                         .font(.subheadline.bold())
                                         .padding(.horizontal, 10)
-                                        .padding(.vertical, 8)
+                                        .padding(.vertical, 12)
                                         .frame(maxWidth: 150)
-                                        .background(Color.blue)
+                                        .background(timer.isRunning ? Color.red :Color.blue)
                                         .foregroundColor(.white)
-                                        .cornerRadius(10)
+                                        .cornerRadius(20)
                                 }
                                 .padding(.top, 20)
                             }
@@ -746,11 +829,11 @@ struct TaskView: View {
                                     Text("Update")
                                         .font(.subheadline.bold())
                                         .padding(.horizontal, 10)
-                                        .padding(.vertical, 8)
+                                        .padding(.vertical, 12)
                                         .frame(maxWidth: 150)
                                         .background(Color.blue)
                                         .foregroundColor(.white)
-                                        .cornerRadius(10)
+                                        .cornerRadius(20)
                                 }
                                 .padding(.top, 20)
                             }
