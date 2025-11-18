@@ -62,6 +62,64 @@ class TaskViewModel: ObservableObject {
         
 //        dateTasks = getTasks(for: date)
     }
+    
+    func fetchTasksPastDue(goal: Goal) {
+        let today = Calendar.current.startOfDay(for: Date())
+        var dueTasks: [AppTask] = []
+        let request = NSFetchRequest<AppTask>(entityName: "AppTask")
+        
+        // Predicate: fetch tasks where the goal relationship matches
+        request.predicate = NSPredicate(format: "goal == %@", goal)
+        
+        do {
+            let tasksForGoal = try container.viewContext.fetch(request)
+            goalTasks = tasksForGoal // or whatever array you’re using
+            
+         
+
+           
+                for task in tasksForGoal {
+                    if let due = task.dateDue {
+                        let dueDay = Calendar.current.startOfDay(for: due)
+                        // Only count tasks that are before today (not today) and incomplete
+                        if dueDay < today && !task.isComplete {
+                            dueTasks.append(task)
+                        }
+                    }
+            }
+            savedTasks = dueTasks
+            print("Fetched \(tasksForGoal.count) tasks for goal: \(goal.title ?? "Unnamed Goal")")
+        } catch {
+            print("Error fetching tasks for goal: \(error)")
+        }
+    }
+    
+    func fetchTasksPastDue() {
+        let today = Calendar.current.startOfDay(for: Date())
+        var dueTasks: [AppTask] = []
+        
+        let taskrequest = NSFetchRequest<AppTask>(entityName: "AppTask")
+        do {
+            
+            savedTasks = try container.viewContext.fetch(taskrequest)
+            dailyTasks = getTasks(for: Date()) // <- Refresh dailyTasks here
+            for task in savedTasks {
+                if let due = task.dateDue {
+                    let dueDay = Calendar.current.startOfDay(for: due)
+                    // Only count tasks that are before today (not today) and incomplete
+                    if dueDay < today && !task.isComplete {
+                        dueTasks.append(task)
+                    }
+                }
+        }
+            savedTasks = dueTasks
+            print("fetched tasks")
+        } catch let error {
+            print("error fetching \(error)")
+        }
+        
+       
+    }
 
     func fetchTasks(for goal: Goal) {
         let request = NSFetchRequest<AppTask>(entityName: "AppTask")
@@ -97,6 +155,59 @@ class TaskViewModel: ObservableObject {
             print("Error fetching tasks for goal: \(error)")
         }
     }
+    
+    func fetchTasks(goal: Goal, week: Date) {
+        
+        let request = NSFetchRequest<AppTask>(entityName: "AppTask")
+
+        var calendar = Calendar.current
+        calendar.firstWeekday = 2 // Monday start
+
+        // Get Monday of this week
+        guard let weekInterval = calendar.dateInterval(of: .weekOfYear, for: week) else { return }
+        let startOfWeek = weekInterval.start       // Monday
+        guard let startOfNextWeek = calendar.date(byAdding: .weekOfYear, value: 1, to: startOfWeek) else { return }
+
+        request.predicate = NSPredicate(
+            format: "goal == %@ AND dateDue >= %@ AND dateDue < %@",
+            goal, startOfWeek as NSDate, startOfNextWeek as NSDate
+        )
+
+        do {
+            let tasksForGoal = try container.viewContext.fetch(request)
+            goalTasks = tasksForGoal
+            print("Fetched \(tasksForGoal.count) tasks for goal: \(goal.title ?? "Unnamed Goal") in week starting: \(startOfWeek)")
+        } catch {
+            print("Error fetching weekly tasks for goal: \(error)")
+        }
+    }
+
+    
+    func fetchTasks(year: Date) {
+        let request = NSFetchRequest<AppTask>(entityName: "AppTask")
+        
+        let calendar = Calendar.current
+        // Start of the year
+        guard let startOfYear = calendar.date(from: calendar.dateComponents([.year], from: year)),
+              let startOfNextYear = calendar.date(byAdding: .year, value: 1, to: startOfYear) else {
+            return
+        }
+        
+        request.predicate = NSPredicate(
+            format: "dateDue >= %@ AND dateDue < %@",
+            startOfYear as NSDate,
+            startOfNextYear as NSDate
+        )
+        
+        do {
+            let tasksInYear = try container.viewContext.fetch(request)
+            savedTasks = tasksInYear
+            print("Fetched \(tasksInYear.count) tasks in year: \(calendar.component(.year, from: year))")
+        } catch {
+            print("Error fetching tasks: \(error)")
+        }
+    }
+
     
     func fetchTasks(month: Date) {
         let request = NSFetchRequest<AppTask>(entityName: "AppTask")
@@ -330,7 +441,58 @@ class TaskViewModel: ObservableObject {
         }
     }
     
-    func createTaskAndReturn (title: String, dueDate: Date?, dateOnly: Bool = false, reminders: Bool = false) -> AppTask {
+//    func createTaskAndReturn (title: String, dueDate: Date?, dateOnly: Bool = false, reminders: Bool = false) -> AppTask {
+//        let newTask = AppTask(context: container.viewContext)
+//        newTask.dateCreated = Date()
+//        newTask.title = title
+//        newTask.dateDue = dueDate
+//        newTask.dateOnly = dateOnly
+//        newTask.lastActive = Date()
+//        newTask.reminder = reminders
+//        
+//        CoreDataManager.shared.saveContext()
+//        
+//        if reminders == true {
+//            scheduleReminder(task: newTask)
+//        }
+//        return newTask
+//        
+////        func addTaskToGoalTwo(goalr: Goal, title: String, dueDate: Date?, dateOnly: Bool = false) -> AppTask {
+////            let newTask = AppTask(context: goalr.managedObjectContext!)
+////            newTask.dateCreated = Date()
+////            newTask.title = title
+////            newTask.goal = goalr
+////            newTask.dateDue = dueDate
+////            newTask.dateOnly = dateOnly
+////            goalr.addToTask(newTask)
+////            newTask.lastActive = Date()
+////            goalr.isComplete = false
+////            CoreDataManager.shared.saveContext()
+////            fetchGoals()
+////            return newTask
+////          
+////        }
+//    }
+//    
+    func createTaskAndReturn(
+        title: String,
+        dueDate: Date?,
+        dateOnly: Bool = false,
+        reminders: Bool = false
+    ) -> AppTask {
+        
+        // 1. Try to find an existing task with the same title
+        let fetchRequest: NSFetchRequest<AppTask> = AppTask.fetchRequest()
+        fetchRequest.predicate = NSPredicate(format: "title == %@", title)
+        fetchRequest.fetchLimit = 1
+        
+        var existingSeriesID: UUID?
+        
+        if let match = try? container.viewContext.fetch(fetchRequest).first {
+            existingSeriesID = match.seriesID   // <-- re-use seriesID
+        }
+        
+        // 2. Create the new task
         let newTask = AppTask(context: container.viewContext)
         newTask.dateCreated = Date()
         newTask.title = title
@@ -339,29 +501,23 @@ class TaskViewModel: ObservableObject {
         newTask.lastActive = Date()
         newTask.reminder = reminders
         
+        // 3. Assign correct seriesID
+        if let reusedID = existingSeriesID {
+            newTask.seriesID = reusedID
+        } else {
+            newTask.seriesID = UUID()          // <-- new seriesID for first task of that title
+        }
+
+        // 4. Save
         CoreDataManager.shared.saveContext()
         
         if reminders == true {
             scheduleReminder(task: newTask)
         }
+
         return newTask
-        
-//        func addTaskToGoalTwo(goalr: Goal, title: String, dueDate: Date?, dateOnly: Bool = false) -> AppTask {
-//            let newTask = AppTask(context: goalr.managedObjectContext!)
-//            newTask.dateCreated = Date()
-//            newTask.title = title
-//            newTask.goal = goalr
-//            newTask.dateDue = dueDate
-//            newTask.dateOnly = dateOnly
-//            goalr.addToTask(newTask)
-//            newTask.lastActive = Date()
-//            goalr.isComplete = false
-//            CoreDataManager.shared.saveContext()
-//            fetchGoals()
-//            return newTask
-//          
-//        }
     }
+
     
     func createTask(title: String, date: Date?, dateOnly: Bool = false, reminders: Bool = false) {
         let newTask = AppTask(context: container.viewContext)
@@ -393,6 +549,7 @@ class TaskViewModel: ObservableObject {
             let matchingTasks = try container.viewContext.fetch(fetchRequest)
 
             for t in matchingTasks {
+                if t.timer != nil { continue }
                 let newTimer = TimerEntity(context: container.viewContext)
                 t.timer = newTimer
             }
@@ -416,6 +573,7 @@ class TaskViewModel: ObservableObject {
 
             for t in matchingTasks {
                 if let timer = t.timer {
+                    if timer.countdownNum > 0 { continue }
                     timer.countdownTimer += totalSeconds
                     timer.countdownNum += totalSeconds
                     timer.totalTimeEstimate += totalSeconds
@@ -470,7 +628,7 @@ class TaskViewModel: ObservableObject {
 
     func repeatingTrue (task: AppTask) {
         task.repeating = true
-        task.seriesID = UUID()
+//        task.seriesID = UUID()
         CoreDataManager.shared.saveContext()
     }
     
@@ -709,6 +867,7 @@ class TaskViewModel: ObservableObject {
                     print("Failed to schedule notification: \(error.localizedDescription)")
                 }
             }
+            turnOffReminders(task: task)
         }
         showQuantityValData(task: task)
         
@@ -910,7 +1069,7 @@ class TaskViewModel: ObservableObject {
             }
             current = calendar.date(byAdding: .day, value: 1, to: current)!
         }
-
+        
         return result
     }
     
@@ -922,6 +1081,29 @@ class TaskViewModel: ObservableObject {
     func updateTaskTitle (task: AppTask, newTitle: String) {
         task.title = newTitle
         CoreDataManager.shared.saveContext()
+    }
+    
+    func updateTaskTitleRepeating (task: AppTask, newTitle: String) {
+        guard let context = task.managedObjectContext,
+              let seriesID = task.seriesID else {
+            return
+        }
+
+        // Fetch all tasks that share the same seriesID
+        let fetchRequest: NSFetchRequest<AppTask> = AppTask.fetchRequest()
+        fetchRequest.predicate = NSPredicate(format: "seriesID == %@", seriesID as CVarArg)
+
+        do {
+            let matchingTasks = try context.fetch(fetchRequest)
+            for t in matchingTasks {
+                t.title = newTitle
+              
+            }
+            CoreDataManager.shared.saveContext()
+        } catch {
+            print("Failed to fetch tasks for deletion: \(error)")
+        }
+       
     }
     
     func addDateDueToTask( task: AppTask, date: Date) {
@@ -1069,6 +1251,16 @@ class TaskViewModel: ObservableObject {
         return "\(formatter.string(from: monday))  -  \(formatter.string(from: sunday))"
     }
     
+    func getMonthRange(for date: Date) -> String {
+        
+            let formatter = DateFormatter()
+            formatter.dateFormat = "LLLL yyyy" // Example: "September 2025"
+        
+        
+        return formatter.string(from: date)
+       
+    }
+    
 
     func turnOffReminders(task: AppTask) {
         task.reminder = false
@@ -1183,4 +1375,37 @@ class TaskViewModel: ObservableObject {
         }
        
     }
+    
+    func getIncompleteTasksCount(tasks: [AppTask]) -> Int {
+        let today = Calendar.current.startOfDay(for: Date())
+        var count = 0
+
+        for task in tasks {
+            if let due = task.dateDue {
+                let dueDay = Calendar.current.startOfDay(for: due)
+                // Only count tasks that are before today (not today) and incomplete
+                if dueDay < today && !task.isComplete {
+                    count += 1
+                }
+            }
+        }
+
+        return count
+    }
+    
+    func getCompletedTasks(tasks: [AppTask]) -> Int {
+
+        var count = 0
+
+        for task in tasks {
+            if task.isComplete == true {
+                count += 1
+            }
+            
+        }
+
+        return count
+    }
+
+
 }

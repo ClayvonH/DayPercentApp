@@ -38,6 +38,7 @@ struct DailyTaskProgressFooter: View {
 //        if displayedTasks.count > 0 {
         
             VStack {
+               
                 if let month = month {
                     Text("\(month, formatter: monthFormatter)")
                         .bold()
@@ -64,6 +65,12 @@ struct DailyTaskProgressFooter: View {
                                             .foregroundColor(colorScheme == .dark ? .white : .black)
                                 }
                              
+                            } else if week != nil {
+                                if timerVM.dayTaskTimeRemaining > 0 {
+                                    Text("Time Remaining: \(timerVM.dayTaskTimeRemaining.asHoursMinutesSeconds())")
+                                            .bold()
+                                            .foregroundColor(colorScheme == .dark ? .white : .black)
+                                }
                             } else {
                                 if goal.estimatedTimeRemaining > 0 {
                                     Text("Time Remaining: \(goal.estimatedTimeRemaining.asHoursMinutesSeconds())")

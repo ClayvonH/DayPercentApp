@@ -18,8 +18,11 @@ struct GoalsView: View {
     @State private var isCompactView = false
     
     @State private var isEditView = false
+    @State private var isCompleteGoalView = false
     @State private var showDeleteConfirmation = false
+    @State private var showCompleteConfirmation = false
     @State private var goalToDelete: Goal? = nil
+    @State private var selectedGoal: Goal? = nil
     @State private var selectedSort: GoalSortOption = .recent
     
     var displayedGoals: [Goal] {
@@ -37,9 +40,12 @@ struct GoalsView: View {
                         .padding(.horizontal)
                         .foregroundStyle(.primary)
                     
+                    
                     Spacer()
                     
                     GoalSortView(selectedSort: $selectedSort)
+                        .padding(.top, 20)
+                    
                 }
                 .frame(maxWidth: .infinity)
                 
@@ -194,7 +200,48 @@ struct GoalsView: View {
                                     }
                                     .frame(maxWidth: .infinity, minHeight: 140)
                                     
-                                    
+                                    if isCompleteGoalView {
+                                        HStack {
+                                            Button(action: {
+                                                showCompleteConfirmation = true
+                                                selectedGoal = goal
+                                                
+                                            }){
+                                                Image(systemName: "circle")
+                                                    .foregroundStyle(.green)
+                                                    .frame(width: 30, height: 30)
+                                                    .background(colorScheme == .dark ? .gray.opacity(0.20) : .white)
+                                                    .clipShape(Circle())
+                                            }
+                                            
+                                            .font(.body.bold())
+                                            .foregroundColor(.blue)
+                                            .alert("Mark this goal complete?", isPresented: $showCompleteConfirmation) {
+                                                Button("Complete And Keep Unfinished Tasks", role: .destructive) {
+                                                    if let goal = selectedGoal {
+                                                        goalVM.completeGoal(goal: goal)
+                                                        goalVM.fetchGoals()
+                                                    }
+                                                    
+                                                }
+                                                Button("Complete And Delete Unfinished Tasks", role: .destructive) {
+                                                    if let goal = selectedGoal {
+                                                        goalVM.completeGoalEarly(goal: goal)
+                                                        taskVM.fetchTasks(for: goal)
+                                                        goalVM.GoalElapsedTime(goal: goal)
+                                                        goalVM.fetchGoals()
+                                                        isCompleteGoalView = false
+                                                    }
+                                                    
+                                                }
+                                                Button("Cancel", role: .cancel) {
+                                                    
+                                                    
+                                                }
+                                            }
+                                            
+                                        }
+                                    }
                                 }
                                 .padding(.horizontal, 12)
                                 .frame(maxHeight: 180)
@@ -212,6 +259,7 @@ struct GoalsView: View {
                 HStack {
                     
                     Button(action: {
+                        isCompleteGoalView = false
                         isEditView.toggle()
                     }, label: {
                         if isEditView == false {
@@ -221,7 +269,18 @@ struct GoalsView: View {
                         }
                     })
                     Spacer()
-                    
+                    Button(action: {
+                        isEditView = false
+                        isCompleteGoalView.toggle()
+                    }, label: {
+                        if isCompleteGoalView == false {
+                            Text("Complete")
+                        } else {
+                            Text("Done")
+                        }
+                     
+                    })
+                    Spacer()
                     Button(action: {
                         showCreateGoal = true
                     }, label: {
@@ -250,6 +309,20 @@ struct GoalsView: View {
 //                            Text("Tasks")
 //                        }
 //                    }
+                    
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                                   NavigationLink(
+                                       destination: StatsView(
+                                           taskVM: taskVM,
+                                           timerVM: timerVM,
+                                           goalVM: goalVM
+                                       )
+                                   ) {
+                                       Text("Stats")
+                                           .padding(.top, 7)
+                                   }
+                               }
+                    
                     ToolbarItem(placement: .navigationBarTrailing) {
                                    NavigationLink(
                                        destination: CompletedGoals(

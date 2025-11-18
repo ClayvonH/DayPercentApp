@@ -52,6 +52,7 @@ struct TaskView: View {
     @State private var completeTaskSheet: Bool = false
     
     @State private var showEmptyTitleAlert = false
+    @State private var showChangeTitleAlert = false
     @State private var showLowQvalTotalAlert = false
     @State private var showRemindersAlert = false
     @State private var showRemindersOffAlert = false
@@ -128,9 +129,11 @@ struct TaskView: View {
                                             showEmptyTitleAlert = true
                                             return
                                         }
-                                        taskVM.updateTaskTitle(task: task, newTitle: titleText)
-                                        editTitle.toggle()
-                                        isEditView.toggle()
+                                        while titleText.last == " " {
+                                            titleText.removeLast()
+                                        }
+                                        showChangeTitleAlert = true
+                                        
                                     } ) {
                                         Text("Change Name")
                                             .font(.subheadline.bold())
@@ -155,7 +158,7 @@ struct TaskView: View {
                                             .padding(.horizontal, 10)
                                         
                                             .padding(.vertical, 8)
-                                            .frame(maxWidth: 150)
+                                            .frame(maxWidth: 150, maxHeight: 35)
                                             .background(Color.gray.opacity(0.25))
                                             .foregroundColor(.white)
                                             .cornerRadius(10)
@@ -164,6 +167,71 @@ struct TaskView: View {
                                 }
                                 .alert("Please enter a task title", isPresented: $showEmptyTitleAlert) {
                                     Button("OK", role: .cancel) { }
+                                }
+                                .alert("Please enter a task title", isPresented: $showChangeTitleAlert) {
+                                    Button(action: {
+                                        guard !titleText.isEmpty else {
+                                            showEmptyTitleAlert = true
+                                            return
+                                        }
+                                        taskVM.updateTaskTitle(task: task, newTitle: titleText)
+                                        editTitle.toggle()
+                                        isEditView.toggle()
+                                        showChangeTitleAlert = false
+                                    } ) {
+                                        Text("Change Name")
+                                            .font(.subheadline.bold())
+                                            .padding(.horizontal, 10)
+                                        
+                                            .padding(.vertical, 8)
+                                            .frame(maxWidth: 150)
+                                            .background(Color.blue)
+                                            .foregroundColor(.white)
+                                            .cornerRadius(10)
+                                        
+                                    }
+                                    if task.repeating == true {
+                                        Button(action: {
+                                            guard !titleText.isEmpty else {
+                                                showEmptyTitleAlert = true
+                                                return
+                                            }
+                                            taskVM.updateTaskTitleRepeating(task: task, newTitle: titleText)
+                                            editTitle.toggle()
+                                            isEditView.toggle()
+                                            showChangeTitleAlert = false
+                                            
+                                        } ) {
+                                            Text("Change Name All Repeating Tasks")
+                                                .font(.subheadline.bold())
+                                                .padding(.horizontal, 10)
+                                            
+                                                .padding(.vertical, 8)
+                                                .frame(maxWidth: 150)
+                                                .background(Color.blue)
+                                                .foregroundColor(.white)
+                                                .cornerRadius(10)
+                                            
+                                        }
+                                    }
+                                    Button(action: {
+                                        editTitle.toggle()
+                                        isEditView.toggle()
+                                        showChangeTitleAlert = false
+                                    } ) {
+                                        Text("Cancel")
+                                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                            .foregroundColor(colorScheme == .dark ? .white : .black)
+                                            .contentShape(Rectangle())
+                                            .padding(.horizontal, 10)
+                                        
+                                            .padding(.vertical, 8)
+                                            .frame(maxWidth: 150)
+                                            .background(Color.gray.opacity(0.25))
+                                            .foregroundColor(.white)
+                                            .cornerRadius(10)
+                                        
+                                    }
                                 }
                             }
                                 

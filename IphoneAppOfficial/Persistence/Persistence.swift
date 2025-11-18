@@ -5,7 +5,7 @@
 //  Created by Clayvon Hatton on 7/30/25.
 //
 
-import CoreData
+//import CoreData
 
 //struct PersistenceController {
 //    static let shared = PersistenceController()

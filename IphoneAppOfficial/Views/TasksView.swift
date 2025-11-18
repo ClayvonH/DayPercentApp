@@ -131,12 +131,12 @@ struct TasksView: View {
                            if monthView == true {
                                VStack {
                                    Text("All")
-                                   Text("Tasks")
+//                                   Text("Tasks")
                                }
                            } else {
                                VStack {
                                    Text("Monthly")
-                                   Text("Tasks")
+//                                   Text("Tasks")
                                }
                            }
                        }
@@ -162,12 +162,12 @@ struct TasksView: View {
                             if weekView == true {
                                 VStack {
                                     Text("All")
-                                    Text("Tasks")
+//                                    Text("Tasks")
                                 }
                             } else {
                                 VStack {
                                     Text("Weekly")
-                                    Text("Tasks")
+//                                    Text("Tasks")
                                 }
                             }
                            
@@ -385,10 +385,20 @@ struct TasksView: View {
         .background(colorScheme == .dark ? .black.opacity(0.10) : .gray.opacity(0.15))
         .onAppear {
             if taskVM.countTasks() <= 500 {
-                taskVM.fetchTasks()
+                if weekView == true {
+                    taskVM.fetchTasks(week: currentWeek)
+                } else if monthView == true {
+                    taskVM.fetchTasks(month: currentMonth)
+                } else {
+                    taskVM.fetchTasks()
+                }
             } else {
-                monthView = true 
-                taskVM.fetchTasks(month: currentMonth)
+                if weekView == true {
+                    taskVM.fetchTasks(week: currentWeek)
+                } else {
+                    monthView = true
+                    taskVM.fetchTasks(month: currentMonth)
+                }
             }
           
             timerVM.updateAllRunningTaskTimers()

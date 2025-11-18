@@ -215,11 +215,136 @@ class GoalViewModel: ObservableObject {
        
     }
     
+    func goalElapsedTimeToggle(goal: Goal, period: String, date: Date) -> Double {
+        var totalElapsed: Double = 0.0
+        var overallTime: Double = 0.0
+
+        let calendar = Calendar.current
+        let targetDate = calendar.startOfDay(for: date)
+
+        var startDate: Date?
+        var endDate: Date?
+
+        switch period.lowercased() {
+        case "week":
+            var mondayCalendar = calendar
+            mondayCalendar.firstWeekday = 2 // Monday start
+
+            // Start of the week containing 'date'
+            startDate = mondayCalendar.date(from: mondayCalendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: targetDate))
+            // End of that week (7 days later)
+            endDate = mondayCalendar.date(byAdding: .day, value: 7, to: startDate!)
+
+        case "month":
+            startDate = calendar.date(from: calendar.dateComponents([.year, .month], from: targetDate))
+            endDate = calendar.date(byAdding: .month, value: 1, to: startDate!)
+
+        case "year":
+            startDate = calendar.date(from: calendar.dateComponents([.year], from: targetDate))
+            endDate = calendar.date(byAdding: .year, value: 1, to: startDate!)
+
+        default: // "all"
+            startDate = nil
+            endDate = nil
+        }
+
+        // Loop through the goal’s tasks
+        if let tasks = goal.task as? Set<AppTask> {
+            for task in tasks {
+                guard let dateDue = task.dateDue else { continue }
+
+                // Include only tasks within the period range
+                if let start = startDate, let end = endDate {
+                    if !(dateDue >= start && dateDue < end) { continue }
+                }
+
+                if let timer = task.timer {
+                    totalElapsed += timer.elapsedTime
+                    overallTime += timer.countdownNum
+                }
+                if let quantity = task.quantityval {
+                    totalElapsed += quantity.timeElapsed
+                    overallTime += quantity.totalTimeEstimate
+                }
+            }
+        }
+
+        goal.combinedElapsed = totalElapsed
+        goal.overAllTimeCombined = overallTime
+
+        return totalElapsed
+    }
+
+
     func goalElapsedTimeAll (goals: [Goal]) {
         for goal in goals {
             GoalElapsedTime(goal: goal)
         }
     }
+    
+    func goalTimeRemaining(goal: Goal, period: String, date: Date) -> Double {
+        var totalRemaining: Double = 0.0
+        let calendar = Calendar.current
+        let targetDate = calendar.startOfDay(for: date)
+
+        var startDate: Date?
+        var endDate: Date?
+
+        // Define time range based on period
+        switch period.lowercased() {
+        case "week":
+            var mondayCalendar = calendar
+            mondayCalendar.firstWeekday = 2 // Monday
+            startDate = mondayCalendar.date(from: mondayCalendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: targetDate))
+            endDate = mondayCalendar.date(byAdding: .day, value: 7, to: startDate!)
+
+        case "month":
+            startDate = calendar.date(from: calendar.dateComponents([.year, .month], from: targetDate))
+            endDate = calendar.date(byAdding: .month, value: 1, to: startDate!)
+
+        case "year":
+            startDate = calendar.date(from: calendar.dateComponents([.year], from: targetDate))
+            endDate = calendar.date(byAdding: .year, value: 1, to: startDate!)
+
+        default: // "all"
+            startDate = nil
+            endDate = nil
+        }
+
+        // Loop through tasks in goal
+        if let tasks = goal.task as? Set<AppTask> {
+            for task in tasks {
+                guard let dateDue = task.dateDue else { continue }
+
+                // Skip tasks outside the selected period
+                if let start = startDate, let end = endDate {
+                    if !(dateDue >= start && dateDue < end) { continue }
+                }
+
+                var taskRemaining: Double = 0.0
+
+                // Calculate remaining for timer-based tasks
+                if let timer = task.timer {
+                    let remaining = max(timer.countdownNum - timer.elapsedTime, 0)
+                    taskRemaining += remaining
+                }
+
+                // Calculate remaining for quantity-based tasks
+                if let quantity = task.quantityval {
+                    let remaining = max(quantity.totalTimeEstimate - quantity.timeElapsed, 0)
+                    taskRemaining += remaining
+                }
+
+                totalRemaining += taskRemaining
+            }
+        }
+
+        // Optionally store in Core Data properties if you use them elsewhere
+        goal.overAllTimeCombined = totalRemaining
+
+        return totalRemaining
+    }
+
     
     func getGoals(for date: Date) -> [Goal] {
         let filtered = savedGoals.filter {
@@ -267,6 +392,17 @@ class GoalViewModel: ObservableObject {
     }
     
     func addTaskToGoalTwo(goalr: Goal, title: String, dueDate: Date?, dateOnly: Bool = false, reminders: Bool = false) -> AppTask {
+        
+        let fetchRequest: NSFetchRequest<AppTask> = AppTask.fetchRequest()
+        fetchRequest.predicate = NSPredicate(format: "title == %@", title)
+        fetchRequest.fetchLimit = 1
+        var existingSeriesID: UUID?
+        
+        if let match = try? container.viewContext.fetch(fetchRequest).first {
+            existingSeriesID = match.seriesID   // <-- re-use seriesID
+        }
+        
+        
         let newTask = AppTask(context: goalr.managedObjectContext!)
         newTask.dateCreated = Date()
         newTask.title = title
@@ -277,6 +413,12 @@ class GoalViewModel: ObservableObject {
         newTask.lastActive = Date()
         newTask.reminder = reminders
         goalr.isComplete = false
+        if let reusedID = existingSeriesID {
+            newTask.seriesID = reusedID
+        } else {
+            newTask.seriesID = UUID()          // <-- new seriesID for first task of that title
+        }
+
         CoreDataManager.shared.saveContext()
         if reminders == true {
             scheduleReminder(task: newTask)
@@ -288,6 +430,12 @@ class GoalViewModel: ObservableObject {
     
     func editDate(for goal: Goal, newDueDate: Date?) {
         goal.dateDue = newDueDate
+        CoreDataManager.shared.saveContext()
+    }
+    
+    func incompleteGoal(goal: Goal) {
+        goal.isComplete = false
+        goal.dateCompleted = nil
         CoreDataManager.shared.saveContext()
     }
     
@@ -547,6 +695,11 @@ class GoalViewModel: ObservableObject {
         }
     }
     
+    func statGoals(goals: [Goal]) -> [Goal] {
+        let goals = goals
+        return goals
+   
+    }
 //    enum CompletedGoalSortOption: String, CaseIterable, Identifiable {
 //        case title = "Alphabetical"
 //        case zaTitle = "Z-A Alphabetical"
@@ -635,5 +788,175 @@ class GoalViewModel: ObservableObject {
     }
     
     
+    func pastDueGoalTasks(goal: Goal) -> Int {
+        let today = Calendar.current.startOfDay(for: Date())
+        var count = 0
 
+        
+        
+        if let tasks = goal.task?.allObjects as? [AppTask] {
+            for task in tasks {
+                if let due = task.dateDue {
+                    let dueDay = Calendar.current.startOfDay(for: due)
+                    // Only count tasks that are before today (not today) and incomplete
+                    if dueDay < today && !task.isComplete {
+                        count += 1
+                    }
+                }
+            }
+        }
+        return count 
+    }
+    
+//    func getCompletedTasks(goal: Goal) -> Int {
+//    
+//        var count = 0
+//
+//        
+//        
+//        if let tasks = goal.task?.allObjects as? [AppTask] {
+//            for task in tasks {
+//                if task.isComplete {
+//                    count += 1
+//                }
+//            
+//            }
+//        }
+//        return count
+//    }
+
+    func goalCompletedTasks(goal: Goal, period: String, date: Date) -> Int {
+        var completedTasks: Int = 0
+        let calendar = Calendar.current
+        let targetDate = calendar.startOfDay(for: date)
+
+        var startDate: Date?
+        var endDate: Date?
+
+        // Define time range based on period
+        switch period.lowercased() {
+        case "week":
+            var mondayCalendar = calendar
+            mondayCalendar.firstWeekday = 2 // Monday
+            startDate = mondayCalendar.date(from: mondayCalendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: targetDate))
+            endDate = mondayCalendar.date(byAdding: .day, value: 7, to: startDate!)
+
+        case "month":
+            startDate = calendar.date(from: calendar.dateComponents([.year, .month], from: targetDate))
+            endDate = calendar.date(byAdding: .month, value: 1, to: startDate!)
+
+        case "year":
+            startDate = calendar.date(from: calendar.dateComponents([.year], from: targetDate))
+            endDate = calendar.date(byAdding: .year, value: 1, to: startDate!)
+
+        default: // "all"
+            startDate = nil
+            endDate = nil
+        }
+
+        // Loop through tasks in goal
+        if let tasks = goal.task as? Set<AppTask> {
+            for task in tasks {
+                guard let dateDue = task.dateDue else { continue }
+
+                // Skip tasks outside the selected period
+                if let start = startDate, let end = endDate {
+                    if !(dateDue >= start && dateDue < end) { continue }
+                }
+                
+                
+                if task.isComplete {
+                    completedTasks += 1
+                }
+
+
+//                var taskRemaining: Double = 0.0
+//
+//                // Calculate remaining for timer-based tasks
+//                if let timer = task.timer {
+//                    let remaining = max(timer.countdownNum - timer.elapsedTime, 0)
+//                    taskRemaining += remaining
+//                }
+//
+//                // Calculate remaining for quantity-based tasks
+//                if let quantity = task.quantityval {
+//                    let remaining = max(quantity.totalTimeEstimate - quantity.timeElapsed, 0)
+//                    taskRemaining += remaining
+//                }
+//
+//                totalRemaining += taskRemaining
+            }
+        }
+
+        // Optionally store in Core Data properties if you use them elsewhere
+
+        return completedTasks
+    }
+    
+    
+    func goalTotalTasks(goal: Goal, period: String, date: Date) -> Int {
+        
+        var totalTasks: Int = 0
+        let calendar = Calendar.current
+        let targetDate = calendar.startOfDay(for: date)
+        
+        var startDate: Date?
+        var endDate: Date?
+        
+        // Define time range based on period
+        switch period.lowercased() {
+        case "week":
+            var mondayCalendar = calendar
+            mondayCalendar.firstWeekday = 2 // Monday
+            startDate = mondayCalendar.date(from: mondayCalendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: targetDate))
+            endDate = mondayCalendar.date(byAdding: .day, value: 7, to: startDate!)
+            
+        case "month":
+            startDate = calendar.date(from: calendar.dateComponents([.year, .month], from: targetDate))
+            endDate = calendar.date(byAdding: .month, value: 1, to: startDate!)
+            
+        case "year":
+            startDate = calendar.date(from: calendar.dateComponents([.year], from: targetDate))
+            endDate = calendar.date(byAdding: .year, value: 1, to: startDate!)
+            
+        default: // "all"
+            startDate = nil
+            endDate = nil
+        }
+        
+        // Loop through tasks in goal
+        if let tasks = goal.task as? Set<AppTask> {
+            for task in tasks {
+                guard let dateDue = task.dateDue else { continue }
+                
+                // Skip tasks outside the selected period
+                if let start = startDate, let end = endDate {
+                    if !(dateDue >= start && dateDue < end) { continue }
+                }
+                
+                totalTasks += 1
+                
+                //                var taskRemaining: Double = 0.0
+                //
+                //                // Calculate remaining for timer-based tasks
+                //                if let timer = task.timer {
+                //                    let remaining = max(timer.countdownNum - timer.elapsedTime, 0)
+                //                    taskRemaining += remaining
+                //                }
+                //
+                //                // Calculate remaining for quantity-based tasks
+                //                if let quantity = task.quantityval {
+                //                    let remaining = max(quantity.totalTimeEstimate - quantity.timeElapsed, 0)
+                //                    taskRemaining += remaining
+                //                }
+                //
+                //                totalRemaining += taskRemaining
+            }
+        }
+        
+        // Optionally store in Core Data properties if you use them elsewhere
+        
+        return totalTasks
+    }
 }
+

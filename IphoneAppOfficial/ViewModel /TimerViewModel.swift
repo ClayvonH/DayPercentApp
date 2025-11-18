@@ -44,8 +44,8 @@ class TimerViewModel: ObservableObject {
     @Published var totalTaskTime: Double = 0
     @Published var taskProgressPercent: Double = 0
     @Published var taskTimeRemaining: Double = 0
-    @Published var activeTasksNum : Int = 0
-    @Published var completedTasksNum : Int = 0
+    @Published var activeTasksNum: Int = 0
+    @Published var completedTasksNum: Int = 0
     @Published var dayCombinedElapsedProgress: Double = 0
     @Published var dayTimeRemaining: Double = 0
     @Published var dayTotalTaskTime: Double = 0
@@ -153,6 +153,7 @@ class TimerViewModel: ObservableObject {
                         stopTimer(task)
                         timerData.timerComplete = true
                         task.isComplete = true
+                        turnOffReminders(task: task)
 
                         // Schedule a local notification
 //                        let content = UNMutableNotificationContent()
@@ -216,6 +217,7 @@ class TimerViewModel: ObservableObject {
                         stopTimer(task)
                         timerData.timerComplete = true
                         task.isComplete = true
+                        turnOffReminders(task: task)
 
                         // Schedule a local notification
 //                        let content = UNMutableNotificationContent()
@@ -279,6 +281,7 @@ class TimerViewModel: ObservableObject {
                     stopTimer(task)
                     timerData.timerComplete = true
                     task.isComplete = true
+                    turnOffReminders(task: task)
                     
                     // Schedule a local notification
 //                    let content = UNMutableNotificationContent()
@@ -578,6 +581,7 @@ class TimerViewModel: ObservableObject {
             if timerData.timerComplete {
                 print("Timer Complete")
                 task.isComplete = true
+                
             } else {
                 print("Stopping timer")
             }
@@ -686,7 +690,7 @@ class TimerViewModel: ObservableObject {
                 task.isComplete = true
                 print("Task complete!")
                 task.timer?.elapsedTime = cdNum
-                
+                turnOffReminders(task: task)
             }
         }
 
@@ -881,5 +885,10 @@ class TimerViewModel: ObservableObject {
           }
         
     }
-    
+    func turnOffReminders(task: AppTask) {
+        task.reminder = false
+        let id = task.objectID.uriRepresentation().absoluteString
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [id])
+        CoreDataManager.shared.saveContext()
+    }
 }

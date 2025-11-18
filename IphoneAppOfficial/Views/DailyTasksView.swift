@@ -298,6 +298,20 @@ struct DailyTasksView: View {
 //                    }
 //                }
                 ToolbarItem(placement: .navigationBarTrailing) {
+                               NavigationLink(
+                                   destination: StatsView(
+                                       taskVM: taskVM,
+                                       timerVM: timerVM,
+                                       goalVM: goalVM
+                                   )
+                               ) {
+                                   Text("Stats")
+                                       .bold()
+                                       .foregroundColor(.blue)
+                                       
+                               }
+                           }
+                ToolbarItem(placement: .navigationBarTrailing) {
                     NavigationLink(destination: CalendarView(taskVM: taskVM, timerVM: timerVM, goalVM: goalVM)) {
                         Image(systemName: "calendar")
                             .font(.title)
@@ -318,6 +332,7 @@ struct DailyTasksView: View {
                           
                     }
                 }
+                
             }
         }
     }

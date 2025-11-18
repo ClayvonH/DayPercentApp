@@ -75,6 +75,8 @@ class CoreDataManager {
         }
 
         container.viewContext.automaticallyMergesChangesFromParent = true
+        normalizeAllTaskTitles()
+//        normalizeAllTaskTimes()
     }
 
     var context: NSManagedObjectContext {
@@ -92,83 +94,65 @@ class CoreDataManager {
             }
         }
     }
-//    
-//    func migrateFromOldManagerWithRelationships() {
-//        let oldContext = OldCoreDataManager.shared.context
-//        let newContext = self.context
-//        
-//        guard let entities = oldContext.persistentStoreCoordinator?.managedObjectModel.entities else { return }
-//        
-//        // Keep track of old -> new objects
-//        var objectMapping: [NSManagedObjectID: NSManagedObject] = [:]
-//        
-//        // Step 1: Copy all objects (attributes only)
-//        for entity in entities {
-//            guard let entityName = entity.name else { continue }
-//            let fetchRequest = NSFetchRequest<NSManagedObject>(entityName: entityName)
-//            
-//            do {
-//                let oldObjects = try oldContext.fetch(fetchRequest)
-//                for oldObject in oldObjects {
-//                    let newObject = NSEntityDescription.insertNewObject(forEntityName: entityName, into: newContext)
-//                    
-//                    // Copy attributes
-//                    for (name, _) in oldObject.entity.attributesByName {
-//                        newObject.setValue(oldObject.value(forKey: name), forKey: name)
-//                    }
-//                    
-//                    // Store mapping
-//                    objectMapping[oldObject.objectID] = newObject
-//                }
-//            } catch {
-//                print("Failed to fetch old objects for \(entity.name ?? "unknown"): \(error)")
-//            }
-//        }
-//        
-//        // Step 2: Copy relationships
-//        for entity in entities {
-//            guard let entityName = entity.name else { continue }
-//            let fetchRequest = NSFetchRequest<NSManagedObject>(entityName: entityName)
-//            
-//            do {
-//                let oldObjects = try oldContext.fetch(fetchRequest)
-//                for oldObject in oldObjects {
-//                    guard let newObject = objectMapping[oldObject.objectID] else { continue }
-//                    
-//                    for (name, rel) in oldObject.entity.relationshipsByName {
-//                        if rel.isToMany {
-//                            // To-many relationship
-//                            if let oldSet = oldObject.value(forKey: name) as? NSSet {
-//                                let newSet = NSMutableSet()
-//                                for oldRelated in oldSet {
-//                                    if let oldRelatedObject = oldRelated as? NSManagedObject,
-//                                       let newRelated = objectMapping[oldRelatedObject.objectID] {
-//                                        newSet.add(newRelated)
-//                                    }
-//                                }
-//                                newObject.setValue(newSet, forKey: name)
-//                            }
-//                        } else {
-//                            // To-one relationship
-//                            if let oldRelated = oldObject.value(forKey: name) as? NSManagedObject,
-//                               let newRelated = objectMapping[oldRelated.objectID] {
-//                                newObject.setValue(newRelated, forKey: name)
-//                            }
-//                        }
-//                    }
-//                }
-//            } catch {
-//                print("Failed to copy relationships for \(entityName): \(error)")
-//            }
-//        }
-//        
-//        // Save the new context
-//        do {
-//            try newContext.save()
-//            print("✅ Migration with relationships complete")
-//        } catch {
-//            print("❌ Failed to save new context: \(error)")
-//        }
-//    }
+    
+    func normalizeAllTaskTitles() {
+        let request = NSFetchRequest<AppTask>(entityName: "AppTask")
 
-}
+        do {
+            let tasks = try container.viewContext.fetch(request)
+            var changed = false
+
+            for task in tasks {
+                if let title = task.title {
+
+                    // Clean trailing spaces
+                    let trimmed = title.trimmingCharacters(in: .whitespaces)
+
+                    // If different → update
+                    if trimmed != title {
+                        task.title = trimmed
+                        changed = true
+                    }
+                }
+            }
+
+            if changed {
+                try container.viewContext.save()
+                print("🔧 Task titles normalized.")
+            } else {
+                print("✔ No task titles needed cleaning.")
+            }
+
+        } catch {
+            print("❌ Error normalizing task titles: \(error)")
+        }
+    }
+    
+    func normalizeAllTaskTimes() {
+        let request = NSFetchRequest<AppTask>(entityName: "AppTask")
+
+        do {
+            let tasks = try container.viewContext.fetch(request)
+            var changed = false
+
+            for task in tasks {
+                if task.title == "Code An Extra Hour", let timer = task.timer, (task.dateDue ?? Date() <= Date()) {
+                    timer.elapsedTime = 3600.0
+                    timer.countdownTimer = 0
+                    timer.percentCompletion = 100
+                    changed = true
+                }
+            }
+
+            if changed {
+                try container.viewContext.save()
+                print("🔧 Task times normalized.")
+            } else {
+                print("✔ No task times needed updating.")
+            }
+
+        } catch {
+            print("❌ Error normalizing task times: \(error)")
+        }
+    }
+

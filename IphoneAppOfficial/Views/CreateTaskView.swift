@@ -99,85 +99,92 @@ struct CreateTaskView: View {
             
            
                 
-                VStack (alignment: .center){
-                    HStack {
-                        Text("Create Task")
-                            .font(.largeTitle)
-                            .bold()
-                        
-                    }
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.bottom,10)
-                    .padding(.top,10)
-                    
-                    if let goal = goal {
-                        Text("For: \(goal.title ?? "")")
-                            .font(.title)
-                            .bold()
-                            .padding(.bottom)
-                        
-                    }
-                    
-                    if let date = date {
-                        Text("Tasks For \(formatDate(date))")
-                            .font(.title)
-                            .bold()
-                            .padding(.bottom)
-                        
-                    }
-                    
-                    Text("Task Title")
-                        .font(.title)
+            VStack (alignment: .center){
+                HStack {
+                    Text("Create Task")
+                        .font(.largeTitle)
                         .bold()
                     
-                    HStack {
-                        TextField("Enter task Title", text: $taskTitle)
-                            .padding(.leading)
-                            .frame(maxWidth: titleIsFocused ? 320 : 395, minHeight: 44)
-                            .font(.title)
-                            .bold()
-                            .foregroundColor(colorScheme == .dark ? .white : .black)
-                            .background(colorScheme == .dark ? Color.gray.opacity(0.2) : Color.white)
-                            .focused($titleIsFocused)
+                }
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.bottom,10)
+                .padding(.top,10)
+                
+                if let goal = goal {
+                    Text("For: \(goal.title ?? "")")
+                        .font(.title)
+                        .bold()
+                        .padding(.bottom)
+                    
+                }
+                
+                if let date = date {
+                    Text("Tasks For \(formatDate(date))")
+                        .font(.title)
+                        .bold()
+                        .padding(.bottom)
+                    
+                }
+                
+                Text("Task Title")
+                    .font(.title)
+                    .bold()
+                
+                HStack {
+                    TextField("Enter task Title", text: $taskTitle)
+                        .padding(.leading)
+                        .frame(maxWidth: titleIsFocused ? 320 : 395, minHeight: 44)
+                        .font(.title)
+                        .bold()
+                        .foregroundColor(colorScheme == .dark ? .white : .black)
+                        .background(colorScheme == .dark ? Color.gray.opacity(0.2) : Color.white)
+                        .focused($titleIsFocused)
+                    
+                    if titleIsFocused {
                         
-                        if titleIsFocused {
-                    
-                            Button("Done") {
-                                titleIsFocused = false // This dismisses the keyboard
-                            }
-                            .padding(.trailing, 5)
-                            .transition(.opacity)
-                            .animation(.easeInOut, value: titleIsFocused)
+                        Button("Done") {
+                            titleIsFocused = false // This dismisses the keyboard
                         }
+                        .padding(.trailing, 5)
+                        .transition(.opacity)
+                        .animation(.easeInOut, value: titleIsFocused)
                     }
-                    .frame(maxWidth: .infinity)
+                }
+                .frame(maxWidth: .infinity)
+                
+                
+                
+                HStack {
+                    Text("Repeats:")
+                        .font(.title).bold()
                     
-                    
-                    
-                    
-                    
-                    Button(action: {
-                        titleIsFocused = false
-                        repeatingTasks.toggle()
-                    }, label: {
-                        if repeatingTasks == true {
-                            Text("Repeats")
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                .contentShape(Rectangle())
-                        } else {
-                            Text("Doesn't Repeat")
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                .contentShape(Rectangle())
-                        }
-                        
+                
+                Button(action: {
+                    titleIsFocused = false
+                    repeatingTasks.toggle()
+                }, label: {
+                    if repeatingTasks == true {
+                        Text("ON")
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .contentShape(Rectangle())
+                    } else {
+                        Text("Off")
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .contentShape(Rectangle())
                     }
-                    )
-                    .frame(width: 350,height: 40)
-                    .foregroundStyle(.white)
-                    .background(Color(.blue))
-                    .cornerRadius(15)
-                    .padding(.leading, 9)
-                    .padding(.top, 13)
+                    
+                }
+                )
+                .frame(width: 150)
+                .foregroundStyle(.white)
+                .background(Color(.blue))
+                .cornerRadius(15)
+                .padding(.leading, 9)
+//                .padding(.top, 13)
+            }
+            .frame(maxWidth: .infinity, alignment: .center)
+            .padding(.top, 10)
+            .padding(.bottom, 10)
                     
                     if repeatingTasks {
                         HStack {
@@ -332,6 +339,9 @@ struct CreateTaskView: View {
                         guard !taskTitle.isEmpty else {
                             showEmptyTitleAlert = true
                             return
+                        }
+                        while taskTitle.last == " " {
+                            taskTitle.removeLast()
                         }
                         
                         if selectedWeekdays.isEmpty {repeatingTasks = false}

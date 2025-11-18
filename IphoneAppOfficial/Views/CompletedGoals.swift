@@ -18,8 +18,11 @@ struct CompletedGoals: View {
     @State private var isCompactView = false
     
     @State private var isEditView = false
+    @State private var isMarkIncompleteView = false
     @State private var showDeleteConfirmation = false
+    @State private var showMarkIncompleteConfirmation = false
     @State private var goalToDelete: Goal? = nil
+    @State private var incompleteGoal: Goal? = nil
     @State private var selectedSort: CompletedGoalSortOption = .recentCompleted
     var displayedGoals: [Goal] {
 //        taskVM.sortedTasksAll(allTasks: taskVM.savedTasks, option: selectedSort)
@@ -193,7 +196,38 @@ struct CompletedGoals: View {
                                 }
                                 .frame(maxWidth: .infinity, minHeight: 140)
                                 
-                                
+                                if isMarkIncompleteView {
+                                    HStack {
+                                        Button(action: {
+                                            showMarkIncompleteConfirmation = true
+                                            incompleteGoal = goal
+                                            
+                                        }){
+                                            Image(systemName: "circle")
+                                                .foregroundStyle(.green)
+                                                .frame(width: 30, height: 30)
+                                                .background(colorScheme == .dark ? .gray.opacity(0.20) : .white)
+                                                .clipShape(Circle())
+                                        }
+                                        
+                                        .font(.body.bold())
+                                        .foregroundColor(.blue)
+                                        .alert("Mark this goal as incomplete?", isPresented: $showMarkIncompleteConfirmation) {
+                                            Button("Mark Incomplete", role: .destructive) {
+                                                if let goal = incompleteGoal {
+                                                    goalVM.incompleteGoal(goal: goal)
+                                                    goalVM.fetchGoals()
+                                                    isMarkIncompleteView = false
+                                                }
+                                                
+                                            }
+                                            Button("Cancel", role: .cancel) {
+                              
+                                            }
+                                        }
+                                        
+                                    }
+                                }
                             }
                             .padding(.horizontal, 12)
                             .frame(maxHeight: 180)
@@ -214,6 +248,17 @@ struct CompletedGoals: View {
                     Text("Delete Goal")
                 })
                 Spacer()
+                
+                Button(action: {
+                    isEditView = false
+                    isMarkIncompleteView.toggle()
+                }, label: {
+                    if isMarkIncompleteView == true {
+                        Text("Done")
+                    } else {
+                        Text("Mark Incomplete")
+                    }
+                })
                 
             }
             .frame(maxWidth: .infinity, alignment: .trailing)

@@ -57,6 +57,11 @@ struct CreateGoalView: View {
                           showEmptyTitleAlert = true
                           return
                       }
+                    
+                    while goalTitle.last == " " {
+                        goalTitle.removeLast()
+                    }
+                    
                     goalVM.addGoal(text: goalTitle, date: selectedDate)
                     goalVM.fetchGoals()
                     dismiss()

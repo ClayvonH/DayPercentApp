@@ -29,7 +29,7 @@ struct GoalSortView: View {
         } label: {
             Text("Sort")
                 .padding(.trailing, 30)
-                .padding(.top, 20)
+//                .padding(.top, 20)
         }
         .transaction { $0.disablesAnimations = true }
     }

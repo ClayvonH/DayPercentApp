@@ -33,8 +33,9 @@ struct GoalView: View {
     @State private var showDeleteForGoalConfirmation = false
     @State private var showFinalDeleteForGoalConfirmation = false
     @State private var monthView: Bool = false
-    
     @State private var currentMonth: Date = Date()
+    @State private var currentWeek: Date = Date()
+    @State private var weekView: Bool = false
     @State private var showMonthViewAlert: Bool = false
    
     
@@ -236,27 +237,91 @@ struct GoalView: View {
                                     .bold()
                                 
                              
-                                    
-                                 Button(action: {
-                                     if goal.taskCount <= 500 {
-                                         monthView.toggle()
-                                         if monthView == true {
-                                             taskVM.fetchTasks(goal: goal, month: currentMonth)
-                                         } else {
-                                             taskVM.fetchTasks(for: goal)
-                                         }
-                                         
-                                     } else {
-                                         showMonthViewAlert.toggle()
-                                     }
-                                }){
-                                    if monthView == true {
-                                        Text("Display All Tasks")
+//                                    
+//                                 Button(action: {
+//                                     if goal.taskCount <= 500 {
+//                                         monthView.toggle()
+//                                         if monthView == true {
+//                                             taskVM.fetchTasks(goal: goal, month: currentMonth)
+//                                         } else {
+//                                             taskVM.fetchTasks(for: goal)
+//                                         }
+//                                         
+//                                     } else {
+//                                         showMonthViewAlert.toggle()
+//                                     }
+//                                }){
+//                                    if monthView == true {
+//                                        Text("Display All Tasks")
+//                                    } else {
+//                                        Text("Monthly Tasks")
+//                                    }
+//                                }
+//                                .padding(.leading)
+                                
+                                
+                                Button(action: {
+                                    if (weekView == false && monthView == false) || (weekView == true && monthView == false) {
+                                        weekView = false
+                                        monthView = true
+                                        taskVM.fetchTasks(goal: goal, month: currentMonth)
                                     } else {
-                                        Text("Monthly Tasks")
+                                        if goal.taskCount <= 500 {
+                                                monthView = false
+                                                taskVM.fetchTasks(for: goal)
+           
+                                        } else {
+                                            showMonthViewAlert.toggle()
+                                        }
                                     }
-                                }
-                                .padding(.leading)
+                                    
+                               }){
+                                   if monthView == true {
+                                       VStack {
+                                           Text("All")
+        //                                   Text("Tasks")
+                                       }
+                                   } else {
+                                       VStack {
+                                           Text("Monthly")
+        //                                   Text("Tasks")
+                                       }
+                                   }
+                               }
+                               .padding(.leading)
+                                
+                                Button(action: {
+                                    if (weekView == false && monthView == false) || (weekView == false && monthView == true) {
+                                        monthView = false
+                                        weekView = true
+                                        taskVM.fetchTasks(goal: goal, week: currentWeek)
+                                    } else {
+                                        if goal.taskCount  <= 500 {
+                                                weekView = false
+                                            taskVM.fetchTasks(for: goal)
+           
+                                        } else {
+                                            showMonthViewAlert.toggle()
+                                        }
+                                    }
+                                 
+                                    }
+                               ){
+                                    if weekView == true {
+                                        VStack {
+                                            Text("All")
+        //                                    Text("Tasks")
+                                        }
+                                    } else {
+                                        VStack {
+                                            Text("Weekly")
+        //                                    Text("Tasks")
+                                        }
+                                    }
+                                   
+                               }
+                               .padding(.leading)
+                                
                                 
                             }
                             .padding(.leading)
@@ -264,7 +329,27 @@ struct GoalView: View {
                         }
                             
                         
-                      
+                        if weekView == true {
+                            HStack {
+                                Text("Week:")
+                                    .font(.title2)
+                                    .bold()
+                                Text("\(taskVM.getWeekRange(for: currentWeek))")
+                                    .font(.title2)
+                                    .bold()
+                            }
+                            .frame(maxWidth: .infinity, alignment: .center)
+                        } else if monthView == true {
+                            HStack {
+//                                Text("Month:")
+//                                    .font(.title2)
+//                                    .bold()
+                                Text("\(taskVM.getMonthRange(for: currentMonth))")
+                                    .font(.title2)
+                                    .bold()
+                            }
+                            .frame(maxWidth: .infinity, alignment: .center)
+                        }
                         
                         LazyVStack (spacing: 5){
                             
@@ -331,7 +416,10 @@ struct GoalView: View {
                 }
                 
                 VStack (spacing: 0) {
-                    if monthView == true {
+                    if weekView == true {
+                        DailyTaskProgressFooter( goal: goal, week: currentWeek, taskVM: taskVM, timerVM: timerVM, goalVM: goalVM, displayedTasks: displayedTasks)
+                    }
+                    else if monthView == true {
                         DailyTaskProgressFooter( goal: goal, month: currentMonth, taskVM: taskVM, timerVM: timerVM, goalVM: goalVM, displayedTasks: displayedTasks)
                     } else {
                         DailyTaskProgressFooter( goal: goal, taskVM: taskVM, timerVM: timerVM, goalVM: goalVM, displayedTasks: displayedTasks)
@@ -387,8 +475,30 @@ struct GoalView: View {
                                     timerVM.setAllTimerVals(goal: goal, goalTasks: displayedTasks)
                                     
                                 }
+                                
                             }) {
                                 Image(systemName: "chevron.left")
+                                    .padding()
+                            }
+                        }
+                        
+                        
+                        if weekView == true {
+                            Spacer()
+                            
+                            Button(action: {
+                                // Go to next month
+                             
+                                
+                                if let previousWeek = Calendar.current.date(byAdding: .weekOfYear, value: -1, to: currentWeek) {
+                                    currentWeek = previousWeek
+                                    taskVM.fetchTasks(goal: goal, week: currentWeek)
+                                    timerVM.setAllTimerVals(goal: goal, goalTasks: displayedTasks)
+                                    
+                                }
+                            }) {
+                                Image(systemName: "chevron.left")
+                                    .padding()
                             }
                         }
                        
@@ -425,8 +535,30 @@ struct GoalView: View {
                                     taskVM.fetchTasks(goal: goal, month: currentMonth)
                                     timerVM.setAllTimerVals(goal: goal, goalTasks: displayedTasks)
                                 }
+                                
+                             
                             }) {
                                 Image(systemName: "chevron.right")
+                                    .padding()
+                            }
+                        }
+                        
+                        if weekView == true {
+                            Spacer()
+                            
+                            Button(action: {
+                                // Go to next month
+                             
+                                
+                                if let nextWeek = Calendar.current.date(byAdding: .weekOfYear, value: 1, to: currentWeek) {
+                                    currentWeek = nextWeek
+                                    taskVM.fetchTasks(goal: goal, week: currentWeek)
+                                    timerVM.setAllTimerVals(goal: goal, goalTasks: displayedTasks)
+                                    
+                                }
+                            }) {
+                                Image(systemName: "chevron.right")
+                                    .padding()
                             }
                         }
                         Spacer()
@@ -455,11 +587,21 @@ struct GoalView: View {
             .onAppear {
                 goalVM.goalCount(goal: goal)
                 if goal.taskCount <= 100 {
-                    monthView = false
-                    taskVM.fetchTasks(for: goal)
+                    
+                    if monthView == true {
+                        taskVM.fetchTasks(goal: goal, month: currentMonth)
+                    } else if weekView == true {
+                        taskVM.fetchTasks(goal: goal, week: currentWeek)
+                    } else {
+                        taskVM.fetchTasks(for: goal)
+                    }
                 } else {
-                    monthView = true
-                    taskVM.fetchTasks(goal: goal, month: currentMonth)
+                    if weekView == true {
+                        taskVM.fetchTasks(goal: goal, week: currentWeek)
+                    } else {
+                        monthView = true
+                        taskVM.fetchTasks(goal: goal, month: currentMonth)
+                    }
                 }
                 timerVM.updateAllRunningTaskTimers(goal: goal, goalTasks: displayedTasks)
                 timerVM.setAllTimerVals(goal: goal, goalTasks: displayedTasks)
