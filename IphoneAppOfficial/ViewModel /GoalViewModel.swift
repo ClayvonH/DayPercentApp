@@ -48,8 +48,7 @@ class GoalViewModel: ObservableObject {
         } catch {
             print("Error fetching tasks: \(error)")
         }
-        
-//        dateTasks = getTasks(for: date)
+
     }
 
     
@@ -173,7 +172,7 @@ class GoalViewModel: ObservableObject {
             }
         }
 
-        // Save results to goal (optional, since this is month-specific)
+        // Save results to goal
         goal.combinedElapsed = totalElapsed
         goal.overAllTimeCombined = overallTime
 

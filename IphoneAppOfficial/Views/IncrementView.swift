@@ -18,8 +18,7 @@ struct IncrementView: View {
     @ObservedObject var timerVM: TimerViewModel
     @State private var inputNumberText: String = ""
     @State private var showAlert: Bool = false
-//    @Binding var displayedTasks: [Task]
-//    @Binding var selectedSort: TaskSortOption
+
     var body: some View {
         
         VStack {
@@ -46,13 +45,12 @@ struct IncrementView: View {
             TextField(" Enter New Quantity Value", text: $inputNumberText)
                 .font(.title)
                 .foregroundColor(colorScheme == .dark ? .white : .black)
-//                .background(colorScheme == .dark ? Color.gray.opacity(0.2) : Color.white)
                 .keyboardType(.decimalPad)
-                .padding() // Adds padding inside the field
-                .frame(height: 55) // Makes it taller and easier to tap
+                .padding()
+                .frame(height: 55)
                 .multilineTextAlignment(.center) 
                 .cornerRadius(10)
-                .contentShape(Rectangle()) // Ensures the whole rectangle is tappable
+                .contentShape(Rectangle()) 
            
             
             Button(action: {
@@ -62,7 +60,6 @@ struct IncrementView: View {
                     showAlert.toggle()
                 } else {
                     taskVM.incrementQuantityVal(task: task, incVal: newNumber)
-//                    displayedTasks = vm.sortedTasksAll(allTasks: vm.savedTasks, option: selectedSort)
                     if let goal = goal {
                         taskVM.GoalElapsedTime(goal: goal)
                         taskVM.fetchTasks(for: goal)
